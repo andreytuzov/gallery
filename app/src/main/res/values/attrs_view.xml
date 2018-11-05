@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="ImageViewGroup">
+        <attr name="ivg_padding" format="dimension" />
+        <attr name="ivg_preload_page_count" format="integer" />
+    </declare-styleable>
+
+    <declare-styleable name="ImageViewGroup_layout">
+        <attr name="ivg_layout_x" format="reference" />
+        <attr name="ivg_layout_y" format="reference" />
+        <attr name="ivg_layout_width" format="reference" />
+        <attr name="ivg_layout_height" format="reference" />
+    </declare-styleable>
+</resources>

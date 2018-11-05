@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Gallery stations</string>
+    <string name="image_msg_not_found">​​No images for this station</string>
+    <string name="searchview_search">Search</string>
+    <string name="action_favourite">Избранное</string>
+    <string name="action_mode_favourite">Добавить в избранное</string>
+    <string name="action_mode_favourite_delete">Удалить из избранного</string>
+    <string name="action_mode_download">Скачать</string>
+    <string name="action_mode_share">Поделиться</string>
+    <string name="all_image_loaded">Загрузка успешно завершена</string>
+    <string name="error_load_image">Ошибка во время загрузки изображений</string>
+    <string name="not_internet_connection">Отсутствует интернет соединение</string>
+    <string name="need_permission">Для выполнения действия необходимо разрешение</string>
+</resources>

@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Галерея станций</string>
+    <string name="image_msg_not_found">Нет изображений для данной станции</string>
+    <string name="searchview_search">Поиск</string>
+</resources>

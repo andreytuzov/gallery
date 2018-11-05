@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_mode_download"
+        android:icon="@drawable/ic_action_mode_download"
+        android:title="@string/action_mode_download"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_mode_share"
+        android:icon="@drawable/ic_action_mode_share"
+        android:title="@string/action_mode_share"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_mode_favourite"
+        android:icon="@drawable/ic_action_mode_favourite"
+        android:title="@string/action_mode_favourite"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_mode_favourite_delete"
+        android:icon="@drawable/ic_action_mode_favourite_delete"
+        android:title="@string/action_mode_favourite_delete"
+        app:showAsAction="always" />
+</menu>

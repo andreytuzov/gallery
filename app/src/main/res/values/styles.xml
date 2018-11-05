@@ -1,0 +1,32 @@
+<resources>
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar" />
+
+    <style name="MaterialSearchViewStyle">
+        <!--&lt;!&ndash; Background for the search bar &ndash;&gt;-->
+        <!--<item name="searchBackground">@color/theme_primary</item>-->
+
+        <!--&lt;!&ndash; Change voice icon &ndash;&gt;-->
+        <item name="searchVoiceIcon">@drawable/searchview_ic_action_voice_search</item>
+
+        <!--&lt;!&ndash; Change clear text icon &ndash;&gt;-->
+        <item name="searchCloseIcon">@drawable/searchview_ic_action_navigation_close</item>
+
+        <!--&lt;!&ndash; Change up icon &ndash;&gt;-->
+        <item name="searchBackIcon">@drawable/searchview_ic_action_navigation_arrow_back</item>
+
+        <!-- Change icon for the suggestions -->
+        <item name="searchSuggestionIcon">@drawable/searchview_ic_suggestion</item>
+
+        <!--&lt;!&ndash; Change background for the suggestions list view &ndash;&gt;-->
+        <!--<item name="searchSuggestionBackground">@android:color/white</item>-->
+
+        <!--&lt;!&ndash; Change text color for edit text. This will also be the color of the cursor &ndash;&gt;-->
+        <!--<item name="android:textColor">@color/theme_primary_text_inverted</item>-->
+
+        <!--&lt;!&ndash; Change hint text color for edit text &ndash;&gt;-->
+        <!--<item name="android:textColorHint">@color/theme_secondary_text_inverted</item>-->
+
+        <!-- Hint for edit text -->
+        <item name="android:hint">@string/searchview_search</item>
+    </style>
+</resources>
