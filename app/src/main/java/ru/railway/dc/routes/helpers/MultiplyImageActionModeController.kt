@@ -5,8 +5,6 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Environment
 import android.support.design.bottomappbar.BottomAppBar
-import android.support.design.widget.AppBarLayout
-import android.support.design.widget.CoordinatorLayout
 import android.support.design.widget.FloatingActionButton
 import android.view.MenuItem
 import com.trello.rxlifecycle2.android.ActivityEvent
@@ -45,6 +43,7 @@ class MultiplyImageActionModeController(
     }
 
     fun finishActionMode() {
+        mActivity.adapter.resetActionModeData()
         mIsInActionMode = false
         mBottomAppBar.hideOnScroll = true
         mFab.setImageDrawable(RUtils.getDrawableCompat(R.drawable.ic_menu_search_location, mActivity))

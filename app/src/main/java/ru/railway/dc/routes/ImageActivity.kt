@@ -11,6 +11,8 @@ import android.speech.RecognizerIntent
 import android.support.design.widget.FloatingActionButton
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
+import android.support.v7.widget.RecyclerView
+import android.support.v7.widget.StaggeredGridLayoutManager
 import android.view.*
 import android.widget.TextView
 import android.widget.Toast
@@ -23,19 +25,24 @@ import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
+import ru.railway.dc.routes.adapters.ImageRecyclerAdapter
 import ru.railway.dc.routes.database.photos.AssetsPhotoDB
 import ru.railway.dc.routes.database.photos.Image
 import ru.railway.dc.routes.helpers.AppCompatBottomAppBar
 import ru.railway.dc.routes.helpers.MultiplyImageActionModeController
 import ru.railway.dc.routes.utils.*
 import java.util.*
-import kotlin.collections.ArrayList
 import kotlin.math.roundToInt
 
 class ImageActivity : RxAppCompatActivity() {
 
     private lateinit var assetsPhotoDB: AssetsPhotoDB
-    private lateinit var imageListView: ImageViewGroup
+
+    lateinit var adapter: ImageRecyclerAdapter
+    private lateinit var recyclerView: RecyclerView
+
+    private val requestHistory = mutableListOf<String>()
+
     private var disposable: Disposable? = null
     private lateinit var searchView: MaterialSearchView
     private lateinit var bottomAppBar: AppCompatBottomAppBar
@@ -89,14 +96,16 @@ class ImageActivity : RxAppCompatActivity() {
     }
 
     private fun showImage(stationName: String?) {
-        if (stationName != null) {
-            if (stationName != lastSearchStationName) {
+        if (stationName != null && stationName != lastSearchStationName) {
+            if (stationName == IMAGE_FAVOURITE_LIST) showFavouriteImage()
+            else {
+                saveRequest(stationName)
                 lastSearchStationName = stationName
                 disposable = loadImageObservable(stationName)
                         .io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
                         .subscribe({
                             searchView.setSuggestions(null)
-                            imageListView.addImage(it)
+                            updateData(it)
                             saveStationToHistory(stationName)
                         }, {
                             K.e("Error during loading image", it)
@@ -107,12 +116,13 @@ class ImageActivity : RxAppCompatActivity() {
 
     fun showNearestImage() {
         executeAfterGetPermission(Manifest.permission.ACCESS_FINE_LOCATION, REQUEST_ACCESS_FINE_LOCATION) {
-            var stationName: String? = null
+            var stationName: String?
             getNearestStation().map { stationNameList ->
                 val imageList = mutableListOf<Image>()
                 if (stationNameList.isNotEmpty()) {
                     stationName = stationNameList[0].first
                     if (!stationName.isNullOrEmpty() && lastSearchStationName != stationName) {
+                        saveRequest(stationName!!)
                         lastSearchStationName = stationName
                         val images = assetsPhotoDB.getPhotoList(stationName!!)
                         if (images != null) {
@@ -127,7 +137,7 @@ class ImageActivity : RxAppCompatActivity() {
                 imageList
             }.io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
                     .subscribe({
-                        imageListView.addImage(it)
+                        updateData(it)
                     }, {
                         K.e("Error during showing nearest station", it)
                     })
@@ -136,16 +146,21 @@ class ImageActivity : RxAppCompatActivity() {
 
     fun showFavouriteImage(isImagesUpdate: Boolean = false) {
         if (isImagesUpdate || lastSearchStationName != IMAGE_FAVOURITE_LIST) {
+            saveRequest(IMAGE_FAVOURITE_LIST)
             lastSearchStationName = IMAGE_FAVOURITE_LIST
             getFavouriteImageList().io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
                     .subscribe({
                         searchView.setSuggestions(null)
-                        imageListView.addImage(it)
+                        updateData(it)
                         snackBarHelper.show("Избранное")
                     }, {
                         K.e("Error during get favourite image", it)
                     })
         }
+    }
+
+    private fun updateData(data: List<Image>?) {
+        adapter.updateData(data)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -169,8 +184,11 @@ class ImageActivity : RxAppCompatActivity() {
         }
 
         // Get name of station
-        imageListView = findViewById(R.id.imageListView)
-        imageListView.setMultiplyImageActionModeController(multiplyImageActionMode)
+        recyclerView = findViewById(R.id.recyclerView)
+        adapter = ImageRecyclerAdapter(this)
+        adapter.setMultiplyImageActionModeController(multiplyImageActionMode)
+        recyclerView.layoutManager = StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
+        recyclerView.adapter = adapter
 
         // Get information
         assetsPhotoDB = AssetsPhotoDB(this)
@@ -222,7 +240,7 @@ class ImageActivity : RxAppCompatActivity() {
         when {
             multiplyImageActionMode.mIsInActionMode -> multiplyImageActionMode.finishActionMode()
             searchView.isSearchOpen -> searchView.closeSearch()
-            else -> super.onBackPressed()
+            else -> if (!restoreRequest()) super.onBackPressed()
         }
     }
 
@@ -327,6 +345,23 @@ class ImageActivity : RxAppCompatActivity() {
     private fun getFavouriteImageList() = Observable.fromCallable {
         assetsPhotoDB.getImageFavouriteList() ?: emptyList()
     }
+
+    private fun saveRequest(request: String) {
+        if (requestHistory.contains(request)) requestHistory.remove(request)
+        requestHistory.add(request)
+    }
+
+    private fun restoreRequest(): Boolean {
+        val size = requestHistory.size
+        if (size <= 1) return false
+        requestHistory.removeAt(size - 1)
+        val stationName = requestHistory[size - 2]
+        showImage(stationName)
+        snackBarHelper.show(stationName)
+        return true
+    }
+
+    fun isFavouriteScreen() = lastSearchStationName == IMAGE_FAVOURITE_LIST
 
     private fun String.formatStationName(): String {
         val startBrace = indexOf('(')

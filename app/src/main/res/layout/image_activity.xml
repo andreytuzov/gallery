@@ -6,20 +6,11 @@
     android:background="@android:color/white"
     android:orientation="vertical">
 
-    <android.support.v4.widget.NestedScrollView
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/recyclerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_gravity="top"
-        android:fillViewport="true"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
-
-        <ru.railway.dc.routes.ImageViewGroup
-            android:id="@+id/imageListView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:ivg_padding="5dp"
-            app:ivg_preload_page_count="2" />
-    </android.support.v4.widget.NestedScrollView>
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
     <ru.railway.dc.routes.helpers.AppCompatBottomAppBar
         android:id="@+id/bottomAppBar"
