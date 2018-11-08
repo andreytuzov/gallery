@@ -25,12 +25,14 @@ import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
+import io.reactivex.subjects.PublishSubject
 import ru.railway.dc.routes.adapters.ImageRecyclerAdapter
 import ru.railway.dc.routes.database.photos.AssetsPhotoDB
 import ru.railway.dc.routes.database.photos.Image
 import ru.railway.dc.routes.helpers.AppCompatBottomAppBar
 import ru.railway.dc.routes.helpers.MultiplyImageActionModeController
 import ru.railway.dc.routes.utils.*
+import java.lang.Exception
 import java.util.*
 import kotlin.math.roundToInt
 
@@ -64,7 +66,7 @@ class ImageActivity : RxAppCompatActivity() {
 
     private fun showNearestStationSuggestion() {
         executeAfterGetPermission(Manifest.permission.ACCESS_FINE_LOCATION, REQUEST_ACCESS_FINE_LOCATION) {
-            getNearestStation().io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
+            getNearestStation(3000).io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
                     .subscribe({
                         if (it != null) {
                             searchView.setSuggestions(it.map { item -> item.first }.toTypedArray())
@@ -117,7 +119,7 @@ class ImageActivity : RxAppCompatActivity() {
     fun showNearestImage() {
         executeAfterGetPermission(Manifest.permission.ACCESS_FINE_LOCATION, REQUEST_ACCESS_FINE_LOCATION) {
             var stationName: String?
-            getNearestStation().map { stationNameList ->
+            getNearestStation(20000).map { stationNameList ->
                 val imageList = mutableListOf<Image>()
                 if (stationNameList.isNotEmpty()) {
                     stationName = stationNameList[0].first
@@ -316,11 +318,16 @@ class ImageActivity : RxAppCompatActivity() {
                     }
             })
 
-    private fun getNearestStation() = Observable.fromCallable {
-        val location = SystemUtils.getLastKnownLocation(this)
-        if (location != null) {
-            assetsPhotoDB.getNearestStation(location, 10000)
-        } else null
+    private fun getNearestStation(waitTime: Long): Observable<List<Pair<String, Double>>> {
+        val publishSubject: PublishSubject<List<Pair<String, Double>>> = PublishSubject.create()
+        SystemUtils.requestCurrentLocation(waitTime, this) {
+            var data: List<Pair<String, Double>>? = null
+            if (it != null) data = assetsPhotoDB.getNearestStation(it, 10000)
+            if (data != null) publishSubject.onNext(data)
+            else publishSubject.onError(Exception("Nearest station not found"))
+            publishSubject.onComplete()
+        }
+        return publishSubject
     }
 
     private fun loadStationObservable(pattern: String) =
