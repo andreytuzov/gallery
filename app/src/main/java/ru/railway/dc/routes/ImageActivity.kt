@@ -3,9 +3,13 @@ package ru.railway.dc.routes
 import android.Manifest
 import android.animation.ValueAnimator
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.*
 import android.speech.RecognizerIntent
 import android.support.design.widget.FloatingActionButton
@@ -57,6 +61,15 @@ class ImageActivity : RxAppCompatActivity() {
     private var lastSearchStationName: String? = null
     private var permissionActions: MutableMap<Int, () -> Unit> = mutableMapOf()
 
+    private val locationService by lazy {
+        object : LocationListener {
+            override fun onLocationChanged(location: Location?) {}
+            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+            override fun onProviderEnabled(provider: String?) {}
+            override fun onProviderDisabled(provider: String?) {}
+        }
+    }
+
     private fun saveStationToHistory(stationName: String) {
         Observable.fromCallable {
             assetsPhotoDB.addStationToHistory(stationName)
@@ -66,7 +79,7 @@ class ImageActivity : RxAppCompatActivity() {
 
     private fun showNearestStationSuggestion() {
         executeAfterGetPermission(Manifest.permission.ACCESS_FINE_LOCATION, REQUEST_ACCESS_FINE_LOCATION) {
-            getNearestStation(3000).io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
+            getNearestStation().io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
                     .subscribe({
                         if (it != null) {
                             searchView.setSuggestions(it.map { item -> item.first }.toTypedArray())
@@ -118,28 +131,32 @@ class ImageActivity : RxAppCompatActivity() {
 
     fun showNearestImage() {
         executeAfterGetPermission(Manifest.permission.ACCESS_FINE_LOCATION, REQUEST_ACCESS_FINE_LOCATION) {
-            var stationName: String?
-            getNearestStation(20000).map { stationNameList ->
-                val imageList = mutableListOf<Image>()
-                if (stationNameList.isNotEmpty()) {
-                    stationName = stationNameList[0].first
-                    if (!stationName.isNullOrEmpty() && lastSearchStationName != stationName) {
-                        saveRequest(stationName!!)
-                        lastSearchStationName = stationName
-                        val images = assetsPhotoDB.getPhotoList(stationName!!)
-                        if (images != null) {
-                            imageList.addAll(images)
-                            imageList.shuffle(Random(System.currentTimeMillis()))
-                        }
-                        this@ImageActivity.runOnUiThread {
-                            snackBarHelper.show(StringUtils.getShortStation(stationName!!.formatStationName(), 33))
+            getNearestStation().map { stationNameList ->
+                if (stationNameList.isEmpty()) emptyList()
+                else {
+                    val stationName = stationNameList[0].first
+                    if (stationName.isEmpty()) emptyList()
+                    else {
+                        if (lastSearchStationName == stationName) listOf(Image.createEmptyImage())
+                        else {
+                            saveRequest(stationName)
+                            lastSearchStationName = stationName
+                            val images = assetsPhotoDB.getPhotoList(stationName)
+                            if (images != null) {
+                                val imageList = mutableListOf<Image>()
+                                imageList.addAll(images)
+                                imageList.shuffle(Random(System.currentTimeMillis()))
+                                this@ImageActivity.runOnUiThread {
+                                    snackBarHelper.show(StringUtils.getShortStation(stationName.formatStationName(), 33))
+                                }
+                                imageList
+                            } else null
                         }
                     }
                 }
-                imageList
             }.io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
                     .subscribe({
-                        updateData(it)
+                        if (it!!.isEmpty() || !it[0].isEmptyImage()) updateData(it)
                     }, {
                         K.e("Error during showing nearest station", it)
                     })
@@ -201,6 +218,16 @@ class ImageActivity : RxAppCompatActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        registerLocationListener()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        unregisterLocationListener()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         if (disposable?.isDisposed == false) disposable?.dispose()
@@ -220,6 +247,7 @@ class ImageActivity : RxAppCompatActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (requestCode == REQUEST_ACCESS_FINE_LOCATION) registerLocationListener()
             permissionActions[requestCode]?.invoke()
         } else {
             permissionActions.remove(requestCode)
@@ -318,16 +346,38 @@ class ImageActivity : RxAppCompatActivity() {
                     }
             })
 
-    private fun getNearestStation(waitTime: Long): Observable<List<Pair<String, Double>>> {
-        val publishSubject: PublishSubject<List<Pair<String, Double>>> = PublishSubject.create()
-        SystemUtils.requestCurrentLocation(waitTime, this) {
-            var data: List<Pair<String, Double>>? = null
-            if (it != null) data = assetsPhotoDB.getNearestStation(it, 10000)
-            if (data != null) publishSubject.onNext(data)
-            else publishSubject.onError(Exception("Nearest station not found"))
-            publishSubject.onComplete()
+
+    private fun getNearestStation() = Observable.fromCallable {
+        val location = SystemUtils.getLastKnownLocation(this)
+        if (location != null) assetsPhotoDB.getNearestStation(location, 10000)
+        else emptyList()
+    }
+
+    private fun registerLocationListener() {
+        // Check permission
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+
+            val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            val gpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+            val networkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+
+            // If gps is not available
+            if (gpsEnabled || networkEnabled) {
+                // Request location
+                locationManager.requestLocationUpdates(if (gpsEnabled) LocationManager.GPS_PROVIDER
+                else LocationManager.NETWORK_PROVIDER, 1000L, 0F, locationService)
+            }
         }
-        return publishSubject
+    }
+
+    private fun unregisterLocationListener() {
+        // Check permission
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            locationManager.removeUpdates(locationService)
+        }
     }
 
     private fun loadStationObservable(pattern: String) =

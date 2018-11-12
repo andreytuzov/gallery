@@ -30,4 +30,10 @@ data class StationHistory(
 
 data class Image(val id: Int, val url: String, val description: String?, val station: Station? = null) {
     fun getFullImageUrl() = url.replace("_s", "")
+
+    fun isEmptyImage() = id == -1
+
+    companion object {
+        fun createEmptyImage() = Image(-1, "", null)
+    }
 }
