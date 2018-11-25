@@ -14,6 +14,7 @@ import com.facebook.imagepipeline.image.ImageInfo
 import com.facebook.imagepipeline.request.ImageRequestBuilder
 import com.stfalcon.frescoimageviewer.ImageViewer
 import com.wang.avi.indicators.*;
+import ru.railway.dc.routes.adapters.ImageRecyclerAdapter
 import ru.railway.dc.routes.database.photos.Image
 import java.util.*
 
@@ -87,8 +88,12 @@ object ViewUtils {
 
 fun SimpleDraweeView.loadImage(context: Context, position: Int, imageList: List<Image>,
                                width: Int, height: Int = width) {
+    val image = imageList[position]
+    val imageUrl = if (ImageRecyclerAdapter.isBigImage(position)) image.getFullImageUrl()
+    else image.url
+
     val request = ImageRequestBuilder
-            .newBuilderWithSource(Uri.parse(imageList[position].getFullImageUrl()))
+            .newBuilderWithSource(Uri.parse(imageUrl))
             .setResizeOptions(ResizeOptions.forDimensions(width, height))
 
     val listener = object : BaseControllerListener<ImageInfo>() {

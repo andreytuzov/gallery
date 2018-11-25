@@ -6,6 +6,8 @@ import android.graphics.drawable.ColorDrawable
 import android.support.v7.widget.RecyclerView
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
+import com.facebook.drawee.generic.RoundingParams
 import com.facebook.drawee.view.SimpleDraweeView
 import ru.railway.dc.routes.database.photos.Image
 import ru.railway.dc.routes.helpers.MultiplyImageActionModeController
@@ -15,7 +17,9 @@ import ru.railway.dc.routes.utils.loadImage
 class ImageRecyclerAdapter(val context: Context) : RecyclerView.Adapter<ImageRecyclerAdapter.ImageRecyclerViewHolder>() {
 
     private var mData: List<Image>? = null
-    private val imageSize = RUtils.convertDpToPixels(200, context).toInt()
+    private val screenSize = RUtils.getScreenWidth(context.getSystemService(Context.WINDOW_SERVICE) as WindowManager)
+    private val minImageSize = screenSize / 3
+    private val maxImageSize = screenSize / 2
 
     private var selected: MutableMap<Int, Image>? = null
     private var countSelected: Int = -1
@@ -24,8 +28,11 @@ class ImageRecyclerAdapter(val context: Context) : RecyclerView.Adapter<ImageRec
     override fun onCreateViewHolder(parent: ViewGroup, position: Int): ImageRecyclerViewHolder {
         val image = SimpleDraweeView(context)
         image.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                imageSize)
+                ViewGroup.LayoutParams.WRAP_CONTENT)
         image.isSaveEnabled = false
+        image.hierarchy.roundingParams = RoundingParams.fromCornersRadius(RUtils.convertDpToPixels(IMAGE_CORNER_RADIUS, context))
+        val padding = RUtils.convertDpToPixels(IMAGE_PADDING, context).toInt()
+        image.setPadding(padding, padding, padding, padding)
         val holder = ImageRecyclerViewHolder(image)
         image.setOnLongClickListener {
             val adapterPosition = holder.adapterPosition
@@ -45,7 +52,7 @@ class ImageRecyclerAdapter(val context: Context) : RecyclerView.Adapter<ImageRec
         if (data != null) {
             val imageView = holder.itemView as SimpleDraweeView
             imageView.foreground = ColorDrawable(if (isItemSelected(data.id)) Color.parseColor("#30000000") else Color.TRANSPARENT)
-            imageView.loadImage(context, position, mData!!, imageSize)
+            imageView.loadImage(context, position, mData!!, if (isBigImage(position)) maxImageSize else minImageSize)
         }
     }
 
@@ -96,4 +103,14 @@ class ImageRecyclerAdapter(val context: Context) : RecyclerView.Adapter<ImageRec
     }
 
     class ImageRecyclerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
+
+    companion object {
+        private const val IMAGE_PADDING = 2
+        private const val IMAGE_CORNER_RADIUS = 2
+
+        fun isBigImage(position: Int): Boolean {
+            val index = position % 18
+            return index == 1 || index == 9
+        }
+    }
 }

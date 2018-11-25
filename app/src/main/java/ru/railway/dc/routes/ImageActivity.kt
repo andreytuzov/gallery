@@ -16,10 +16,11 @@ import android.support.design.widget.FloatingActionButton
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 import android.support.v7.widget.RecyclerView
-import android.support.v7.widget.StaggeredGridLayoutManager
 import android.view.*
 import android.widget.TextView
 import android.widget.Toast
+import com.arasthel.spannedgridlayoutmanager.SpanSize
+import com.arasthel.spannedgridlayoutmanager.SpannedGridLayoutManager
 import com.miguelcatalan.materialsearchview.MaterialSearchView
 import com.trello.rxlifecycle2.android.ActivityEvent
 import com.trello.rxlifecycle2.components.support.RxAppCompatActivity
@@ -208,7 +209,12 @@ class ImageActivity : RxAppCompatActivity() {
         recyclerView = findViewById(R.id.recyclerView)
         adapter = ImageRecyclerAdapter(this)
         adapter.setMultiplyImageActionModeController(multiplyImageActionMode)
-        recyclerView.layoutManager = StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
+        val layoutManager = SpannedGridLayoutManager(SpannedGridLayoutManager.Orientation.VERTICAL, 3)
+        layoutManager.spanSizeLookup = SpannedGridLayoutManager.SpanSizeLookup {
+            if (ImageRecyclerAdapter.isBigImage(it)) SpanSize(2, 2)
+            else SpanSize(1, 1)
+        }
+        recyclerView.layoutManager = layoutManager
         recyclerView.adapter = adapter
 
         // Get information
