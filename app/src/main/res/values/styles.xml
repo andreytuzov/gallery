@@ -17,15 +17,6 @@
         <!-- Change icon for the suggestions -->
         <item name="searchSuggestionIcon">@drawable/searchview_ic_suggestion</item>
 
-        <!--&lt;!&ndash; Change background for the suggestions list view &ndash;&gt;-->
-        <!--<item name="searchSuggestionBackground">@android:color/white</item>-->
-
-        <!--&lt;!&ndash; Change text color for edit text. This will also be the color of the cursor &ndash;&gt;-->
-        <!--<item name="android:textColor">@color/theme_primary_text_inverted</item>-->
-
-        <!--&lt;!&ndash; Change hint text color for edit text &ndash;&gt;-->
-        <!--<item name="android:textColorHint">@color/theme_secondary_text_inverted</item>-->
-
         <!-- Hint for edit text -->
         <item name="android:hint">@string/searchview_search</item>
     </style>

@@ -12,8 +12,8 @@
         android:title="@string/action_mode_share"
         app:showAsAction="always" />
     <item
-        android:id="@+id/action_mode_favourite"
-        android:icon="@drawable/ic_action_mode_favourite"
-        android:title="@string/action_mode_favourite"
+        android:id="@+id/action_mode_favourite_delete"
+        android:icon="@drawable/ic_action_mode_favourite_delete"
+        android:title="@string/action_mode_favourite_delete"
         app:showAsAction="always" />
 </menu>

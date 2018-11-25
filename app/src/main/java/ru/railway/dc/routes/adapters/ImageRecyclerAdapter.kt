@@ -2,19 +2,22 @@ package ru.railway.dc.routes.adapters
 
 import android.content.Context
 import android.support.v7.widget.RecyclerView
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Toast
-import com.facebook.drawee.generic.RoundingParams
 import com.facebook.drawee.view.SimpleDraweeView
 import com.stfalcon.frescoimageviewer.ImageViewer
+import ru.railway.dc.routes.R
 import ru.railway.dc.routes.database.photos.Image
 import ru.railway.dc.routes.helpers.MultiplyImageActionModeController
 import ru.railway.dc.routes.utils.RUtils
 import ru.railway.dc.routes.utils.loadImage
 
 class ImageRecyclerAdapter(val context: Context) : RecyclerView.Adapter<ImageRecyclerAdapter.ImageRecyclerViewHolder>() {
+
+    val inflater = LayoutInflater.from(context)
 
     private var mData: List<Image>? = null
     private val screenSize = RUtils.getScreenWidth(context.getSystemService(Context.WINDOW_SERVICE) as WindowManager)
@@ -26,15 +29,9 @@ class ImageRecyclerAdapter(val context: Context) : RecyclerView.Adapter<ImageRec
     private var controller: MultiplyImageActionModeController? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, position: Int): ImageRecyclerViewHolder {
-        val image = SimpleDraweeView(context)
-        image.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT)
-        image.isSaveEnabled = false
-        image.hierarchy.roundingParams = RoundingParams.fromCornersRadius(RUtils.convertDpToPixels(IMAGE_CORNER_RADIUS, context))
-        val padding = RUtils.convertDpToPixels(IMAGE_PADDING, context).toInt()
-        image.setPadding(padding, padding, padding, padding)
-        val holder = ImageRecyclerViewHolder(image)
-        image.setOnLongClickListener {
+        val holder = ImageRecyclerViewHolder(inflater.inflate(R.layout.list_item_image, parent, false))
+        holder.imageView.isSaveEnabled = false
+        holder.itemView.setOnLongClickListener {
             val adapterPosition = holder.adapterPosition
             if (adapterPosition != RecyclerView.NO_POSITION) {
                 val data = mData?.get(adapterPosition)
@@ -42,7 +39,7 @@ class ImageRecyclerAdapter(val context: Context) : RecyclerView.Adapter<ImageRec
             }
             true
         }
-        image.setOnClickListener {
+        holder.itemView.setOnClickListener {
             val adapterPosition = holder.adapterPosition
             if (adapterPosition != RecyclerView.NO_POSITION) {
                 if (controller?.mIsInActionMode == false) {
@@ -63,9 +60,6 @@ class ImageRecyclerAdapter(val context: Context) : RecyclerView.Adapter<ImageRec
     override fun onBindViewHolder(holder: ImageRecyclerViewHolder, position: Int) {
         val data = mData?.get(position)
         if (data != null) {
-            val imageView = holder.itemView as SimpleDraweeView
-            imageView.alpha = if (isItemSelected(data.id)) 0.6F else 1F
-
             val isBigImage = ImageRecyclerAdapter.isBigImage(position)
             val imageSize: Int
             val imageUrl = if (isBigImage) {
@@ -75,7 +69,8 @@ class ImageRecyclerAdapter(val context: Context) : RecyclerView.Adapter<ImageRec
                 imageSize = minImageSize
                 data.url
             }
-            imageView.loadImage(imageUrl, imageSize)
+            holder.itemView.isSelected = isItemSelected(data.id)
+            holder.imageView.loadImage(imageUrl, imageSize)
         }
     }
 
@@ -126,12 +121,11 @@ class ImageRecyclerAdapter(val context: Context) : RecyclerView.Adapter<ImageRec
         notifyDataSetChanged()
     }
 
-    class ImageRecyclerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
+    class ImageRecyclerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val imageView = itemView.findViewById<SimpleDraweeView>(R.id.imageView)
+    }
 
     companion object {
-        private const val IMAGE_PADDING = 2
-        private const val IMAGE_CORNER_RADIUS = 2
-
         fun isBigImage(position: Int): Boolean {
             val index = position % 18
             return index == 1 || index == 9

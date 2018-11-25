@@ -36,7 +36,8 @@ class MultiplyImageActionModeController(
             mBottomAppBar.show()
             mBottomAppBar.hideOnScroll = false
             mFab.setImageDrawable(RUtils.getDrawableCompat(R.drawable.ic_action_mode_close, mActivity))
-            createTransitionAnimation(true, R.menu.activity_mode_image).start()
+            createTransitionAnimation(true, if (mActivity.isFavouriteScreen()) R.menu.activity_mode_favourite_image
+            else R.menu.activity_mode_image).start()
             mFab.setOnClickListener { finishActionMode() }
             updateSelectedData(selectedData)
         }
