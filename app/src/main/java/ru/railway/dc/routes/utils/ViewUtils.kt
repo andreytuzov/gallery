@@ -86,24 +86,14 @@ object ViewUtils {
 
 }
 
-fun SimpleDraweeView.loadImage(context: Context, position: Int, imageList: List<Image>,
-                               width: Int, height: Int = width) {
-    val image = imageList[position]
-    val imageUrl = if (ImageRecyclerAdapter.isBigImage(position)) image.getFullImageUrl()
-    else image.url
-
+fun SimpleDraweeView.loadImage(imageUrl: String, imageSize: Int, doAfterLoadImage: (() -> Unit)? = null) {
     val request = ImageRequestBuilder
             .newBuilderWithSource(Uri.parse(imageUrl))
-            .setResizeOptions(ResizeOptions.forDimensions(width, height))
+            .setResizeOptions(ResizeOptions.forSquareSize(imageSize))
 
     val listener = object : BaseControllerListener<ImageInfo>() {
         override fun onFinalImageSet(id: String?, imageInfo: ImageInfo?, animatable: Animatable?) {
-            setOnClickListener {
-                ImageViewer.Builder<String>(context, imageList.map { it.getFullImageUrl() })
-                        .setStartPosition(position)
-                        .setImageChangeListener { Toast.makeText(context, imageList[it].description, Toast.LENGTH_LONG).show() }
-                        .show()
-            }
+            doAfterLoadImage?.invoke()
         }
     }
 

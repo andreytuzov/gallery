@@ -1,14 +1,14 @@
 package ru.railway.dc.routes.adapters
 
 import android.content.Context
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.support.v7.widget.RecyclerView
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.Toast
 import com.facebook.drawee.generic.RoundingParams
 import com.facebook.drawee.view.SimpleDraweeView
+import com.stfalcon.frescoimageviewer.ImageViewer
 import ru.railway.dc.routes.database.photos.Image
 import ru.railway.dc.routes.helpers.MultiplyImageActionModeController
 import ru.railway.dc.routes.utils.RUtils
@@ -42,6 +42,19 @@ class ImageRecyclerAdapter(val context: Context) : RecyclerView.Adapter<ImageRec
             }
             true
         }
+        image.setOnClickListener {
+            val adapterPosition = holder.adapterPosition
+            if (adapterPosition != RecyclerView.NO_POSITION) {
+                if (controller?.mIsInActionMode == false) {
+                    ImageViewer.Builder<String>(context, mData!!.map { it.getFullImageUrl() })
+                            .setStartPosition(adapterPosition)
+                            .setImageChangeListener { Toast.makeText(context, mData!![it].description, Toast.LENGTH_LONG).show() }
+                            .show()
+                } else {
+                    onItemClick(mData!![adapterPosition])
+                }
+            }
+        }
         return holder
     }
 
@@ -51,8 +64,18 @@ class ImageRecyclerAdapter(val context: Context) : RecyclerView.Adapter<ImageRec
         val data = mData?.get(position)
         if (data != null) {
             val imageView = holder.itemView as SimpleDraweeView
-            imageView.foreground = ColorDrawable(if (isItemSelected(data.id)) Color.parseColor("#30000000") else Color.TRANSPARENT)
-            imageView.loadImage(context, position, mData!!, if (isBigImage(position)) maxImageSize else minImageSize)
+            imageView.alpha = if (isItemSelected(data.id)) 0.6F else 1F
+
+            val isBigImage = ImageRecyclerAdapter.isBigImage(position)
+            val imageSize: Int
+            val imageUrl = if (isBigImage) {
+                imageSize = maxImageSize
+                data.getFullImageUrl()
+            } else {
+                imageSize = minImageSize
+                data.url
+            }
+            imageView.loadImage(imageUrl, imageSize)
         }
     }
 
@@ -79,8 +102,8 @@ class ImageRecyclerAdapter(val context: Context) : RecyclerView.Adapter<ImageRec
                 selected = mutableMapOf(Pair(image.id, image))
                 countSelected = 1
                 controller!!.startActionMode(selected!!)
+                notifyDataSetChanged()
             } else onItemClick(image)
-            notifyDataSetChanged()
         }
     }
 
@@ -100,6 +123,7 @@ class ImageRecyclerAdapter(val context: Context) : RecyclerView.Adapter<ImageRec
             selected!![image.id] = image
             controller!!.updateSelectedData(selected!!)
         }
+        notifyDataSetChanged()
     }
 
     class ImageRecyclerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
