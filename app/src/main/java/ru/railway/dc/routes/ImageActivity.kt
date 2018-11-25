@@ -29,14 +29,12 @@ import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
-import io.reactivex.subjects.PublishSubject
 import ru.railway.dc.routes.adapters.ImageRecyclerAdapter
 import ru.railway.dc.routes.database.photos.AssetsPhotoDB
 import ru.railway.dc.routes.database.photos.Image
 import ru.railway.dc.routes.helpers.AppCompatBottomAppBar
 import ru.railway.dc.routes.helpers.MultiplyImageActionModeController
 import ru.railway.dc.routes.utils.*
-import java.lang.Exception
 import java.util.*
 import kotlin.math.roundToInt
 
@@ -49,7 +47,6 @@ class ImageActivity : RxAppCompatActivity() {
 
     private val requestHistory = mutableListOf<String>()
 
-    private var disposable: Disposable? = null
     private lateinit var searchView: MaterialSearchView
     private lateinit var bottomAppBar: AppCompatBottomAppBar
     private lateinit var fab: FloatingActionButton
@@ -69,6 +66,11 @@ class ImageActivity : RxAppCompatActivity() {
             override fun onProviderDisabled(provider: String?) {}
         }
     }
+
+    private var loadStationDisposable: Disposable? = null
+    private var historyStationDisposable: Disposable? = null
+    private var showFavouriteImageDisposable: Disposable? = null
+    private var showImageDisposable: Disposable? = null
 
     private fun saveStationToHistory(stationName: String) {
         Observable.fromCallable {
@@ -92,7 +94,7 @@ class ImageActivity : RxAppCompatActivity() {
     }
 
     private fun showStationSuggestion(pattern: String) {
-        loadStationObservable(pattern).io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
+        loadStationDisposable = loadStationObservable(pattern).io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
                 .subscribe({
                     searchView.setSuggestions(it.toTypedArray())
                 }, {
@@ -102,9 +104,9 @@ class ImageActivity : RxAppCompatActivity() {
 
 
     private fun showHistoryStationSuggestion() {
-        getHistoryStation().io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
-                .subscribe({
-                    searchView.setSuggestions(it!!.map { it.station.name }.toTypedArray())
+        historyStationDisposable = getHistoryStation().io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
+                .subscribe({ stationHistoryList ->
+                    searchView.setSuggestions(stationHistoryList!!.map { it.station.name }.toTypedArray())
                 }, {
                     K.e("Error during get history station", it)
                 })
@@ -116,7 +118,7 @@ class ImageActivity : RxAppCompatActivity() {
             else {
                 saveRequest(stationName)
                 lastSearchStationName = stationName
-                disposable = loadImageObservable(stationName)
+                showImageDisposable = loadImageObservable(stationName)
                         .io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
                         .subscribe({
                             searchView.setSuggestions(null)
@@ -163,11 +165,11 @@ class ImageActivity : RxAppCompatActivity() {
         }
     }
 
-    fun showFavouriteImage(isImagesUpdate: Boolean = false) {
+    private fun showFavouriteImage(isImagesUpdate: Boolean = false) {
         if (isImagesUpdate || lastSearchStationName != IMAGE_FAVOURITE_LIST) {
             saveRequest(IMAGE_FAVOURITE_LIST)
             lastSearchStationName = IMAGE_FAVOURITE_LIST
-            getFavouriteImageList().io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
+            showFavouriteImageDisposable = getFavouriteImageList().io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
                     .subscribe({
                         searchView.setSuggestions(null)
                         updateData(it)
@@ -230,7 +232,10 @@ class ImageActivity : RxAppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (disposable?.isDisposed == false) disposable?.dispose()
+        if (showImageDisposable?.isDisposed == false) showImageDisposable?.dispose()
+        if (loadStationDisposable?.isDisposed == false) loadStationDisposable?.dispose()
+        if (historyStationDisposable?.isDisposed == false) historyStationDisposable?.dispose()
+        if (showFavouriteImageDisposable?.isDisposed == false) showFavouriteImageDisposable?.dispose()
         assetsPhotoDB.close()
     }
 
