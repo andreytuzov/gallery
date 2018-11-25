@@ -1,4 +1,4 @@
-package ru.railway.dc.routes.database
+package io.railway.station.image.database
 
 import android.content.Context
 

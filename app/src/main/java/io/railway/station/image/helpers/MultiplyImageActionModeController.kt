@@ -1,4 +1,4 @@
-package ru.railway.dc.routes.helpers
+package io.railway.station.image.helpers
 
 import android.Manifest
 import android.app.Activity
@@ -9,10 +9,10 @@ import android.support.design.widget.FloatingActionButton
 import android.view.MenuItem
 import com.trello.rxlifecycle2.android.ActivityEvent
 import io.reactivex.Observable
-import ru.railway.dc.routes.ImageActivity
-import ru.railway.dc.routes.R
-import ru.railway.dc.routes.database.photos.Image
-import ru.railway.dc.routes.utils.*
+import io.railway.station.image.ImageActivity
+import io.railway.station.image.R
+import io.railway.station.image.database.photos.Image
+import io.railway.station.image.utils.*
 import java.io.File
 import java.lang.StringBuilder
 

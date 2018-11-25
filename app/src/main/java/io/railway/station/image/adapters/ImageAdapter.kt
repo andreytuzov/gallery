@@ -1,4 +1,4 @@
-package ru.railway.dc.routes.adapters
+package io.railway.station.image.adapters
 
 import android.content.Context
 import android.graphics.drawable.Animatable
@@ -16,8 +16,8 @@ import com.facebook.drawee.view.SimpleDraweeView
 import com.facebook.imagepipeline.image.ImageInfo
 import com.facebook.imagepipeline.request.ImageRequestBuilder
 import com.stfalcon.frescoimageviewer.ImageViewer
-import ru.railway.dc.routes.R
-import ru.railway.dc.routes.database.photos.Image
+import io.railway.station.image.R
+import io.railway.station.image.database.photos.Image
 
 class ImageAdapter(val context: Context, var data: List<Image>?) : BaseAdapter() {
 

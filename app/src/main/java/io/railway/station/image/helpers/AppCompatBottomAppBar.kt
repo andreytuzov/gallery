@@ -1,4 +1,4 @@
-package ru.railway.dc.routes.helpers
+package io.railway.station.image.helpers
 
 import android.content.Context
 import android.support.design.bottomappbar.BottomAppBar

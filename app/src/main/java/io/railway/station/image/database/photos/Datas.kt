@@ -1,8 +1,5 @@
-package ru.railway.dc.routes.database.photos
+package io.railway.station.image.database.photos
 
-import android.arch.persistence.room.Entity
-
-@Entity
 data class Country(
         val id: Int,
         val name: String,

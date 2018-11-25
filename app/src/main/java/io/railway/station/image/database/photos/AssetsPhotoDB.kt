@@ -1,4 +1,4 @@
-package ru.railway.dc.routes.database.photos
+package io.railway.station.image.database.photos
 
 import android.content.ContentValues
 import android.content.Context
@@ -7,11 +7,11 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.location.Location
 
-import ru.railway.dc.routes.App
-import ru.railway.dc.routes.database.AssetsDBLoader
-import ru.railway.dc.routes.utils.K
-import ru.railway.dc.routes.utils.RUtils
-import ru.railway.dc.routes.utils.StringUtils
+import io.railway.station.image.App
+import io.railway.station.image.database.AssetsDBLoader
+import io.railway.station.image.utils.K
+import io.railway.station.image.utils.RUtils
+import io.railway.station.image.utils.StringUtils
 import java.lang.StringBuilder
 import java.util.*
 

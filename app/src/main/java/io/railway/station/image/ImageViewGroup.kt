@@ -1,4 +1,4 @@
-package ru.railway.dc.routes
+package io.railway.station.image
 
 import android.content.Context
 import android.graphics.drawable.Animatable
@@ -18,10 +18,10 @@ import com.facebook.imagepipeline.common.ResizeOptions
 import com.facebook.imagepipeline.image.ImageInfo
 import com.facebook.imagepipeline.request.ImageRequestBuilder
 import com.stfalcon.frescoimageviewer.ImageViewer
-import ru.railway.dc.routes.database.photos.Image
-import ru.railway.dc.routes.helpers.MultiplyImageActionModeController
-import ru.railway.dc.routes.utils.K
-import ru.railway.dc.routes.utils.RUtils
+import io.railway.station.image.database.photos.Image
+import io.railway.station.image.helpers.MultiplyImageActionModeController
+import io.railway.station.image.utils.K
+import io.railway.station.image.utils.RUtils
 import java.util.*
 
 class ImageViewGroup : ViewGroup, ViewTreeObserver.OnScrollChangedListener {

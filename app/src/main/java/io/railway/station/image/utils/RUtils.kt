@@ -1,4 +1,4 @@
-package ru.railway.dc.routes.utils
+package io.railway.station.image.utils
 
 import android.content.Context
 import android.graphics.Point

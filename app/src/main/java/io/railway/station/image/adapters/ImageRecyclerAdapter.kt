@@ -1,4 +1,4 @@
-package ru.railway.dc.routes.adapters
+package io.railway.station.image.adapters
 
 import android.content.Context
 import android.support.v7.widget.RecyclerView
@@ -9,11 +9,11 @@ import android.view.WindowManager
 import android.widget.Toast
 import com.facebook.drawee.view.SimpleDraweeView
 import com.stfalcon.frescoimageviewer.ImageViewer
-import ru.railway.dc.routes.R
-import ru.railway.dc.routes.database.photos.Image
-import ru.railway.dc.routes.helpers.MultiplyImageActionModeController
-import ru.railway.dc.routes.utils.RUtils
-import ru.railway.dc.routes.utils.loadImage
+import io.railway.station.image.R
+import io.railway.station.image.database.photos.Image
+import io.railway.station.image.helpers.MultiplyImageActionModeController
+import io.railway.station.image.utils.RUtils
+import io.railway.station.image.utils.loadImage
 
 class ImageRecyclerAdapter(val context: Context) : RecyclerView.Adapter<ImageRecyclerAdapter.ImageRecyclerViewHolder>() {
 
@@ -61,16 +61,10 @@ class ImageRecyclerAdapter(val context: Context) : RecyclerView.Adapter<ImageRec
         val data = mData?.get(position)
         if (data != null) {
             val isBigImage = ImageRecyclerAdapter.isBigImage(position)
-            val imageSize: Int
-            val imageUrl = if (isBigImage) {
-                imageSize = maxImageSize
-                data.getFullImageUrl()
-            } else {
-                imageSize = minImageSize
-                data.url
-            }
+            val imageSize = if (isBigImage) maxImageSize else minImageSize
+
             holder.itemView.isSelected = isItemSelected(data.id)
-            holder.imageView.loadImage(imageUrl, imageSize)
+            holder.imageView.loadImage(data.getFullImageUrl(), imageSize)
         }
     }
 

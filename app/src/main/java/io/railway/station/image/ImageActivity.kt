@@ -1,4 +1,4 @@
-package ru.railway.dc.routes
+package io.railway.station.image
 
 import android.Manifest
 import android.animation.ValueAnimator
@@ -21,21 +21,25 @@ import android.widget.TextView
 import android.widget.Toast
 import com.arasthel.spannedgridlayoutmanager.SpanSize
 import com.arasthel.spannedgridlayoutmanager.SpannedGridLayoutManager
+import com.crashlytics.android.Crashlytics
+import com.crashlytics.android.answers.Answers
+import com.crashlytics.android.core.CrashlyticsCore
 import com.miguelcatalan.materialsearchview.MaterialSearchView
 import com.trello.rxlifecycle2.android.ActivityEvent
 import com.trello.rxlifecycle2.components.support.RxAppCompatActivity
+import io.fabric.sdk.android.Fabric
 import io.reactivex.Maybe
 import io.reactivex.MaybeOnSubscribe
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
-import ru.railway.dc.routes.adapters.ImageRecyclerAdapter
-import ru.railway.dc.routes.database.photos.AssetsPhotoDB
-import ru.railway.dc.routes.database.photos.Image
-import ru.railway.dc.routes.helpers.AppCompatBottomAppBar
-import ru.railway.dc.routes.helpers.MultiplyImageActionModeController
-import ru.railway.dc.routes.utils.*
+import io.railway.station.image.adapters.ImageRecyclerAdapter
+import io.railway.station.image.database.photos.AssetsPhotoDB
+import io.railway.station.image.database.photos.Image
+import io.railway.station.image.helpers.AppCompatBottomAppBar
+import io.railway.station.image.helpers.MultiplyImageActionModeController
+import io.railway.station.image.utils.*
 import java.util.*
 import kotlin.math.roundToInt
 
@@ -73,6 +77,8 @@ class ImageActivity : RxAppCompatActivity() {
     private var showFavouriteImageDisposable: Disposable? = null
     private var showImageDisposable: Disposable? = null
 
+    private var isNeedStartSearch: Boolean = false
+
     private fun saveStationToHistory(stationName: String) {
         Observable.fromCallable {
             assetsPhotoDB.addStationToHistory(stationName)
@@ -86,6 +92,7 @@ class ImageActivity : RxAppCompatActivity() {
                     .subscribe({
                         if (it != null) {
                             searchView.setSuggestions(it.map { item -> item.first }.toTypedArray())
+                            isNeedStartSearch = true
                             searchView.hideKeyboard(searchView)
                         }
                     }, {
@@ -188,6 +195,11 @@ class ImageActivity : RxAppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.image_activity)
+
+        Fabric.with(this, Crashlytics.Builder()
+                .core(CrashlyticsCore.Builder().disabled(BuildConfig.DEBUG).build())
+                .answers(Answers())
+                .build())
 
         root = findViewById(R.id.root)
 
@@ -327,7 +339,8 @@ class ImageActivity : RxAppCompatActivity() {
             override fun onQueryTextChange(newText: String) =
                     when (newText.length) {
                         SEARCH_STATION_QUERY_THRESHOLD -> {
-                            if (oldText != newText) {
+                            if (oldText != newText || isNeedStartSearch) {
+                                isNeedStartSearch = false
                                 oldText = newText
                                 showStationSuggestion(newText)
                                 true

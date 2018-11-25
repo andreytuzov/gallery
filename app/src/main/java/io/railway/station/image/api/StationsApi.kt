@@ -1,4 +1,4 @@
-package ru.railway.dc.routes.api
+package io.railway.station.image.api
 
 import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient

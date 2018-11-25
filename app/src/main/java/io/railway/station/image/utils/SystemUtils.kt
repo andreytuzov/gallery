@@ -1,4 +1,4 @@
-package ru.railway.dc.routes.utils
+package io.railway.station.image.utils
 
 import android.Manifest
 import android.content.Context
@@ -9,8 +9,8 @@ import android.net.ConnectivityManager
 import android.support.v4.content.ContextCompat
 import okhttp3.Request
 import okio.Okio
-import ru.railway.dc.routes.App
-import ru.railway.dc.routes.api.StationsApi
+import io.railway.station.image.App
+import io.railway.station.image.api.StationsApi
 import java.io.OutputStream
 
 object SystemUtils {

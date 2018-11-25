@@ -1,4 +1,4 @@
-package ru.railway.dc.routes.utils
+package io.railway.station.image.utils
 
 import android.animation.Animator
 import android.animation.ValueAnimator
@@ -14,8 +14,8 @@ import com.facebook.imagepipeline.image.ImageInfo
 import com.facebook.imagepipeline.request.ImageRequestBuilder
 import com.stfalcon.frescoimageviewer.ImageViewer
 import com.wang.avi.indicators.*;
-import ru.railway.dc.routes.adapters.ImageRecyclerAdapter
-import ru.railway.dc.routes.database.photos.Image
+import io.railway.station.image.adapters.ImageRecyclerAdapter
+import io.railway.station.image.database.photos.Image
 import java.util.*
 
 object ViewUtils {

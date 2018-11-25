@@ -1,4 +1,4 @@
-package ru.railway.dc.routes.database.photos
+package io.railway.station.image.database.photos
 
 object Schemas {
     const val TABLE_COUNTRY = "country"

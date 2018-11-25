@@ -1,4 +1,4 @@
-package ru.railway.dc.routes.utils
+package io.railway.station.image.utils
 
 import com.trello.rxlifecycle2.LifecycleTransformer
 import io.reactivex.Maybe
