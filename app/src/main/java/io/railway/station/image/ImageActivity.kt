@@ -180,8 +180,11 @@ class ImageActivity : RxAppCompatActivity() {
             showFavouriteImageDisposable = getFavouriteImageList().io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
                     .subscribe({
                         searchView.setSuggestions(null)
-                        updateData(it)
-                        snackBarHelper.show("Избранное")
+                        if (it.isNullOrEmpty()) snackBarHelper.show("Добавьте изображения в избранное")
+                        else {
+                            updateData(it)
+                            snackBarHelper.show("Избранное")
+                        }
                     }, {
                         K.e("Error during get favourite image", it)
                     })
@@ -189,7 +192,8 @@ class ImageActivity : RxAppCompatActivity() {
     }
 
     private fun updateData(data: List<Image>?) {
-        adapter.updateData(data)
+        if (data.isNullOrEmpty()) snackBarHelper.show("Изображения не найдены")
+        else adapter.updateData(data)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -219,15 +223,14 @@ class ImageActivity : RxAppCompatActivity() {
 
         // Get name of station
         recyclerView = findViewById(R.id.recyclerView)
-        adapter = ImageRecyclerAdapter(this)
+        adapter = ImageRecyclerAdapter(this, 3)
         adapter.setMultiplyImageActionModeController(multiplyImageActionMode)
+        recyclerView.adapter = adapter
         val layoutManager = SpannedGridLayoutManager(SpannedGridLayoutManager.Orientation.VERTICAL, 3)
         layoutManager.spanSizeLookup = SpannedGridLayoutManager.SpanSizeLookup {
-            if (ImageRecyclerAdapter.isBigImage(it)) SpanSize(2, 2)
-            else SpanSize(1, 1)
+            adapter.getSpanSizeByPosition(it)
         }
         recyclerView.layoutManager = layoutManager
-        recyclerView.adapter = adapter
 
         // Get information
         assetsPhotoDB = AssetsPhotoDB(this)

@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Toast
+import com.arasthel.spannedgridlayoutmanager.SpanSize
 import com.facebook.drawee.view.SimpleDraweeView
 import com.stfalcon.frescoimageviewer.ImageViewer
 import io.railway.station.image.R
@@ -14,15 +15,18 @@ import io.railway.station.image.database.photos.Image
 import io.railway.station.image.helpers.MultiplyImageActionModeController
 import io.railway.station.image.utils.RUtils
 import io.railway.station.image.utils.loadImage
+import kotlin.random.Random
 
-class ImageRecyclerAdapter(val context: Context) : RecyclerView.Adapter<ImageRecyclerAdapter.ImageRecyclerViewHolder>() {
+class ImageRecyclerAdapter(
+        val context: Context,
+        val maxImageSize: Int
+) : RecyclerView.Adapter<ImageRecyclerAdapter.ImageRecyclerViewHolder>() {
 
     val inflater = LayoutInflater.from(context)
 
-    private var mData: List<Image>? = null
+    private var mData: MutableList<Image>? = null
     private val screenSize = RUtils.getScreenWidth(context.getSystemService(Context.WINDOW_SERVICE) as WindowManager)
-    private val minImageSize = screenSize / 3
-    private val maxImageSize = screenSize / 2
+    private var imgLocationList: List<ImageLocation>? = null
 
     private var selected: MutableMap<Int, Image>? = null
     private var countSelected: Int = -1
@@ -60,17 +64,43 @@ class ImageRecyclerAdapter(val context: Context) : RecyclerView.Adapter<ImageRec
     override fun onBindViewHolder(holder: ImageRecyclerViewHolder, position: Int) {
         val data = mData?.get(position)
         if (data != null) {
-            val isBigImage = ImageRecyclerAdapter.isBigImage(position)
-            val imageSize = if (isBigImage) maxImageSize else minImageSize
-
+            val imgLocation = imgLocationList!![position]
+            val imageWidth = screenSize * imgLocation.width / maxImageSize
+            val imageHeight = screenSize * imgLocation.height / maxImageSize
             holder.itemView.isSelected = isItemSelected(data.id)
-            holder.imageView.loadImage(data.getFullImageUrl(), imageSize)
+            loadImage(holder.imageView, imageWidth, imageHeight, position)
+        }
+    }
+
+    private fun getImageUrl(position: Int) = mData!![position].getFullImageUrl()
+
+    fun getSpanSizeByPosition(position: Int): SpanSize {
+        val imgLocation = imgLocationList!![position]
+        return SpanSize(imgLocation.width, imgLocation.height)
+    }
+
+    private fun loadImage(
+            imageView: SimpleDraweeView,
+            imageWidth: Int,
+            imageHeight: Int,
+            position: Int
+    ) {
+        var edge = MAX_COUNT_IMAGE_REQUEST - 1
+        imageView.loadImage(getImageUrl(position), imageWidth, imageHeight) {
+            if (edge-- > 0 && mData?.isNotEmpty() == true) {
+                val randomPosition = Random(System.currentTimeMillis()).nextInt(0, mData!!.size)
+                mData!![position] = mData!![randomPosition]
+                loadImage(imageView, imageWidth, imageHeight, position)
+            }
         }
     }
 
     fun updateData(data: List<Image>?) {
-        mData = data
-        notifyDataSetChanged()
+        if (!data.isNullOrEmpty()) {
+            mData = data.toMutableList()
+            imgLocationList = randomImageLocation(mData!!)
+            notifyDataSetChanged()
+        }
     }
 
     fun resetActionModeData() {
@@ -115,14 +145,54 @@ class ImageRecyclerAdapter(val context: Context) : RecyclerView.Adapter<ImageRec
         notifyDataSetChanged()
     }
 
+
+    private fun randomImageLocation(imageList: List<Image>): List<ImageLocation> {
+        val random = java.util.Random(System.currentTimeMillis())
+        val list = mutableListOf<ImageLocation>()
+        val field: Array<BooleanArray> = Array(3000) { BooleanArray(maxImageSize) { false } }
+        var x = 0
+        var y = 0
+        for (image in imageList) {
+            while (field[y][x]) {
+                x++
+                if (x == maxImageSize) {
+                    x = 0
+                    y++
+                }
+            }
+            var maxWidth = 0
+            var maxHeight = 0
+            while (maxWidth < maxImageSize && x + maxWidth < maxImageSize && !field[y][x + maxWidth]) maxWidth++
+            while (maxHeight < maxImageSize && !field[y + maxHeight][x]) maxHeight++
+
+            val width = random.nextInt(maxWidth) + 1
+            val height = when (width) {
+                1 -> 1
+                maxImageSize -> maxImageSize - 1
+                else -> random.nextInt(Math.min(width + 1, maxHeight)) + 1
+            }
+
+            for (i in x until x + width)
+                for (j in y until y + height) {
+                    field[j][i] = true
+                }
+            list.add(ImageLocation(x, y, width, height))
+        }
+        return list
+    }
+
+    data class ImageLocation(
+            val x: Int,
+            val y: Int,
+            val width: Int,
+            val height: Int
+    )
+
     class ImageRecyclerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val imageView = itemView.findViewById<SimpleDraweeView>(R.id.imageView)
     }
 
     companion object {
-        fun isBigImage(position: Int): Boolean {
-            val index = position % 18
-            return index == 1 || index == 9
-        }
+        private var MAX_COUNT_IMAGE_REQUEST = 10
     }
 }
