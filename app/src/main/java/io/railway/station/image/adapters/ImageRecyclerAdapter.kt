@@ -19,7 +19,7 @@ import kotlin.random.Random
 
 class ImageRecyclerAdapter(
         val context: Context,
-        val maxImageSize: Int
+        var maxImageSize: Int
 ) : RecyclerView.Adapter<ImageRecyclerAdapter.ImageRecyclerViewHolder>() {
 
     val inflater = LayoutInflater.from(context)
@@ -102,6 +102,13 @@ class ImageRecyclerAdapter(
             notifyDataSetChanged()
         }
     }
+
+    fun updateMaxImageSize(maxImageSize: Int) =
+            if (maxImageSize != this.maxImageSize && maxImageSize in MIN_IMAGE_SIZE_VALUE..MAX_IMAGE_SIZE_VALUE) {
+                this.maxImageSize = maxImageSize
+                updateData(mData)
+                true
+            } else false
 
     fun resetActionModeData() {
         selected = null
@@ -193,6 +200,8 @@ class ImageRecyclerAdapter(
     }
 
     companion object {
-        private var MAX_COUNT_IMAGE_REQUEST = 10
+        private val MAX_COUNT_IMAGE_REQUEST = 10
+        private val MIN_IMAGE_SIZE_VALUE = 3
+        private val MAX_IMAGE_SIZE_VALUE = 10
     }
 }

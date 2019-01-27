@@ -223,10 +223,11 @@ class ImageActivity : RxAppCompatActivity() {
 
         // Get name of station
         recyclerView = findViewById(R.id.recyclerView)
-        adapter = ImageRecyclerAdapter(this, 3)
+        val maxSpansSize = App.pref.getInt(PREF_MAX_IMAGE_SIZE, 3)
+        adapter = ImageRecyclerAdapter(this, maxSpansSize)
         adapter.setMultiplyImageActionModeController(multiplyImageActionMode)
         recyclerView.adapter = adapter
-        val layoutManager = SpannedGridLayoutManager(SpannedGridLayoutManager.Orientation.VERTICAL, 3)
+        val layoutManager = SpannedGridLayoutManager(SpannedGridLayoutManager.Orientation.VERTICAL, maxSpansSize)
         layoutManager.spanSizeLookup = SpannedGridLayoutManager.SpanSizeLookup {
             adapter.getSpanSizeByPosition(it)
         }
@@ -238,6 +239,17 @@ class ImageActivity : RxAppCompatActivity() {
 
         searchView.post {
             showSearchBar(false)
+        }
+    }
+
+    fun updateSpansNumber(maxImageSize: Int) {
+        if (adapter.updateMaxImageSize(maxImageSize)) {
+            val layoutManager = SpannedGridLayoutManager(SpannedGridLayoutManager.Orientation.VERTICAL, maxImageSize)
+            layoutManager.spanSizeLookup = SpannedGridLayoutManager.SpanSizeLookup {
+                adapter.getSpanSizeByPosition(it)
+            }
+            recyclerView.layoutManager = layoutManager
+            App.pref.edit().putInt(PREF_MAX_IMAGE_SIZE, maxImageSize).apply()
         }
     }
 
@@ -519,6 +531,8 @@ class ImageActivity : RxAppCompatActivity() {
         const val REQUEST_WRITE_EXTERNAL_STORAGE = 124
 
         const val IMAGE_FAVOURITE_LIST = "imageFavouriteList"
+
+        private const val PREF_MAX_IMAGE_SIZE = "max_image_size"
     }
 }
 
