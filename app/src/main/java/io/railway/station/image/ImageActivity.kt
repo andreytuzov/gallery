@@ -18,7 +18,6 @@ import android.support.v4.content.ContextCompat
 import android.support.v7.widget.RecyclerView
 import android.view.*
 import android.widget.TextView
-import android.widget.Toast
 import com.arasthel.spannedgridlayoutmanager.SpannedGridLayoutManager
 import com.crashlytics.android.Crashlytics
 import com.crashlytics.android.answers.Answers
@@ -27,27 +26,21 @@ import com.miguelcatalan.materialsearchview.MaterialSearchView
 import com.trello.rxlifecycle2.android.ActivityEvent
 import com.trello.rxlifecycle2.components.support.RxAppCompatActivity
 import io.fabric.sdk.android.Fabric
-import io.reactivex.Maybe
-import io.reactivex.MaybeOnSubscribe
-import io.reactivex.Observable
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.disposables.Disposable
-import io.reactivex.schedulers.Schedulers
 import io.railway.station.image.adapters.ImageRecyclerAdapter
+import io.railway.station.image.data.StationViewModel
 import io.railway.station.image.database.photos.AssetsPhotoDB
 import io.railway.station.image.database.photos.Image
 import io.railway.station.image.helpers.AppCompatBottomAppBar
 import io.railway.station.image.helpers.MultiplyImageActionModeController
 import io.railway.station.image.utils.*
-import java.util.*
+import io.reactivex.disposables.CompositeDisposable
 import kotlin.math.roundToInt
 
 class ImageActivity : RxAppCompatActivity() {
 
-    private lateinit var assetsPhotoDB: AssetsPhotoDB
-
     lateinit var adapter: ImageRecyclerAdapter
     private lateinit var recyclerView: RecyclerView
+    private lateinit var stationViewModel: StationViewModel
 
     private val requestHistory = mutableListOf<String>()
 
@@ -72,125 +65,110 @@ class ImageActivity : RxAppCompatActivity() {
         }
     }
 
-    private var loadStationDisposable: Disposable? = null
-    private var historyStationDisposable: Disposable? = null
-    private var showFavouriteImageDisposable: Disposable? = null
-    private var showImageDisposable: Disposable? = null
-
+    private var compositeDisposable = CompositeDisposable()
     private var isNeedStartSearch: Boolean = false
-
-    private fun saveStationToHistory(stationName: String) {
-        Observable.fromCallable {
-            assetsPhotoDB.addStationToHistory(stationName)
-        }.io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
-                .emptySubscribe("Error during save last station")
-    }
 
     private fun showNearestStationSuggestion() {
         executeAfterGetPermission(Manifest.permission.ACCESS_FINE_LOCATION, REQUEST_ACCESS_FINE_LOCATION) {
-            getNearestStation().io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
+            val disposable = stationViewModel.getNearestStation()
+                    .io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
                     .subscribe({
                         if (it != null) {
-                            searchView.setSuggestions(it.map { item -> item.first }.toTypedArray())
+                            searchView.setSuggestions(it.map { it.first }.toTypedArray())
                             isNeedStartSearch = true
                             searchView.hideKeyboard(searchView)
                         }
                     }, {
                         K.e("Error during getting nearest station", it)
                     })
+            compositeDisposable.add(disposable)
         }
     }
 
     private fun showStationSuggestion(pattern: String) {
-        loadStationDisposable = loadStationObservable(pattern).io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
+        val disposable = stationViewModel.getStationByPattern(pattern)
+                .io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
                 .subscribe({
-                    searchView.setSuggestions(it.toTypedArray())
+                    if (it.isNotEmpty()) searchView.setSuggestions(it.toTypedArray())
                 }, {
                     K.e("Error during getting list of station name", it)
                 })
+        compositeDisposable.add(disposable)
     }
 
 
     private fun showHistoryStationSuggestion() {
-        historyStationDisposable = getHistoryStation().io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
-                .subscribe({ stationHistoryList ->
-                    searchView.setSuggestions(stationHistoryList!!.map { it.station.name }.toTypedArray())
+        val disposable = stationViewModel.getHistoryStation()
+                .io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
+                .subscribe({
+                    if (it.isNotEmpty()) {
+                        searchView.setSuggestions(it.map { it.station.name }.toTypedArray())
+                    }
                 }, {
                     K.e("Error during get history station", it)
                 })
+        compositeDisposable.add(disposable)
     }
 
-    private fun showImage(stationName: String?) {
-        if (stationName != null && stationName != currentStationName) {
+    private fun showImage(stationName: String) {
+        if (stationName != currentStationName) {
             if (stationName == IMAGE_FAVOURITE_LIST) showFavouriteImage()
             else {
-                saveStationRequest(stationName)
-                showImageDisposable = loadImageObservable(stationName)
+                val disposable = stationViewModel.getImageByPattern(stationName)
                         .io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
                         .subscribe({
-                            searchView.setSuggestions(null)
-                            updateData(it)
-                            saveStationToHistory(stationName)
+                            updateStationData(it, stationName)
+                            val disposable = stationViewModel.saveStationToHistory(stationName)
+                                    .io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
+                                    .emptySubscribe("Error during save station to history")
+                            compositeDisposable.add(disposable)
                         }, {
                             K.e("Error during loading image", it)
                         })
+                compositeDisposable.add(disposable)
             }
         }
     }
 
     fun showNearestImage() {
         executeAfterGetPermission(Manifest.permission.ACCESS_FINE_LOCATION, REQUEST_ACCESS_FINE_LOCATION) {
-            getNearestStation().map { stationNameList ->
-                if (stationNameList.isEmpty()) emptyList()
-                else {
-                    val stationName = stationNameList[0].first
-                    if (stationName.isEmpty()) emptyList()
-                    else {
-                        if (currentStationName == stationName) listOf(Image.createEmptyImage())
-                        else {
-                            saveStationRequest(stationName)
-                            val images = assetsPhotoDB.getPhotoList(stationName)
-                            if (images != null) {
-                                val imageList = mutableListOf<Image>()
-                                imageList.addAll(images)
-                                imageList.shuffle(Random(System.currentTimeMillis()))
-                                this@ImageActivity.runOnUiThread {
-                                    snackBarHelper.show(stationName.formatStationName().limitWithLastConsonant(AssetsPhotoDB.STATION_MAX_LENGTH))
-                                }
-                                imageList
-                            } else null
-                        }
-                    }
-                }
-            }.io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
+            val disposable = stationViewModel.getNearestImage()
+                    .io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
                     .subscribe({
-                        if (it!!.isEmpty() || !it[0].isEmptyImage()) updateData(it)
+                        updateStationData(it.second, it.first)
                     }, {
-                        K.e("Error during showing nearest station", it)
+                        K.e("Error during find nearest image", it)
                     })
+            compositeDisposable.add(disposable)
         }
     }
 
     private fun showFavouriteImage(isImagesUpdate: Boolean = false) {
         if (isImagesUpdate || currentStationName != IMAGE_FAVOURITE_LIST) {
-            saveStationRequest(IMAGE_FAVOURITE_LIST)
-            showFavouriteImageDisposable = getFavouriteImageList().io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
-                    .subscribe({
-                        searchView.setSuggestions(null)
-                        if (it.isNullOrEmpty()) snackBarHelper.show("Добавьте изображения в избранное")
-                        else {
-                            updateData(it)
-                            snackBarHelper.show("Избранное")
-                        }
-                    }, {
-                        K.e("Error during get favourite image", it)
-                    })
+            val disposable = stationViewModel.getFavouriteImage()
+                    .io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
+                    .subscribe({ updateStationData(it, IMAGE_FAVOURITE_LIST) },
+                            { K.e("Error during get favourite image", it) })
+            compositeDisposable.add(disposable)
         }
     }
 
-    private fun updateData(data: List<Image>?) {
-        if (data.isNullOrEmpty()) snackBarHelper.show("Изображения не найдены")
-        else adapter.updateData(data)
+    private fun updateStationData(images: List<Image>?, stationName: String) {
+        searchView.setSuggestions(null)
+        if (images.isNullOrEmpty()) snackBarHelper.show(getString(R.string.image_msg_not_found))
+        else {
+            val msg = if (stationName.isFavouriteScreen()) getString(R.string.favourite)
+            else stationName.formatStationName().limitWithLastConsonant(AssetsPhotoDB.STATION_MAX_LENGTH)
+            snackBarHelper.show(msg)
+            saveStationRequest(stationName)
+            adapter.updateData(images)
+        }
+    }
+
+    private fun saveStationRequest(stationName: String) {
+        currentStationName = stationName
+        if (requestHistory.contains(stationName)) requestHistory.remove(stationName)
+        requestHistory.add(stationName)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -230,23 +208,11 @@ class ImageActivity : RxAppCompatActivity() {
         }
         recyclerView.layoutManager = layoutManager
 
-        // Get information
-        assetsPhotoDB = AssetsPhotoDB(this)
-        assetsPhotoDB.open()
+        stationViewModel = StationViewModel()
+        lifecycle.addObserver(stationViewModel)
 
         searchView.post {
             showSearchBar(false)
-        }
-    }
-
-    fun updateSpansNumber(maxImageSize: Int) {
-        if (adapter.updateMaxImageSize(maxImageSize)) {
-            val layoutManager = SpannedGridLayoutManager(SpannedGridLayoutManager.Orientation.VERTICAL, maxImageSize)
-            layoutManager.spanSizeLookup = SpannedGridLayoutManager.SpanSizeLookup {
-                adapter.getSpanSizeByPosition(it)
-            }
-            recyclerView.layoutManager = layoutManager
-            App.pref.edit().putInt(PREF_MAX_IMAGE_SIZE, maxImageSize).apply()
         }
     }
 
@@ -262,11 +228,7 @@ class ImageActivity : RxAppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (showImageDisposable?.isDisposed == false) showImageDisposable?.dispose()
-        if (loadStationDisposable?.isDisposed == false) loadStationDisposable?.dispose()
-        if (historyStationDisposable?.isDisposed == false) historyStationDisposable?.dispose()
-        if (showFavouriteImageDisposable?.isDisposed == false) showFavouriteImageDisposable?.dispose()
-        assetsPhotoDB.close()
+        if (!compositeDisposable.isDisposed) compositeDisposable.dispose()
     }
 
     fun executeAfterGetPermission(permissionName: String, requestCode: Int, block: () -> Unit) {
@@ -370,23 +332,6 @@ class ImageActivity : RxAppCompatActivity() {
         snackBarHelper = SnackBarHelper(findViewById(R.id.snackBar))
     }
 
-    private fun loadImageObservable(pattern: String) =
-            Maybe.create(MaybeOnSubscribe<List<Image>?> {
-                val data = assetsPhotoDB.getPhotoList(pattern)
-                if (data != null)
-                    it.onSuccess(data)
-                else
-                    this@ImageActivity.runOnUiThread {
-                        Toast.makeText(this@ImageActivity, R.string.image_msg_not_found, Toast.LENGTH_SHORT).show()
-                    }
-            })
-
-
-    private fun getNearestStation() = Observable.fromCallable {
-        val location = LocationUtils.getLastKnownLocation(this)
-        if (location != null) assetsPhotoDB.getNearestStation(location, 10000)
-        else emptyList()
-    }
 
     private fun registerLocationListener() {
         // Check permission
@@ -415,33 +360,13 @@ class ImageActivity : RxAppCompatActivity() {
         }
     }
 
-    private fun loadStationObservable(pattern: String) =
-            Maybe.create(MaybeOnSubscribe<List<String>> {
-                val stationNameList = assetsPhotoDB.getStationNameList(pattern)
-                if (stationNameList?.isNotEmpty() == true) it.onSuccess(stationNameList)
-            }).subscribeOn(Schedulers.newThread()).observeOn(AndroidSchedulers.mainThread())
-
-    private fun getHistoryStation() = Observable.fromCallable {
-        assetsPhotoDB.getStationHistoryList()
-    }
-
     fun addImageListToFavourite(ids: List<Int>) {
-        assetsPhotoDB.addImageListToFavourite(ids)
+        stationViewModel.addImageToFavourite(ids)
     }
 
     fun removeImageListFromFavourite(ids: List<Int>) {
-        assetsPhotoDB.removeImageListFromFavourite(ids)
+        stationViewModel.removeImageFromFavourite(ids)
         showFavouriteImage(true)
-    }
-
-    private fun getFavouriteImageList() = Observable.fromCallable {
-        assetsPhotoDB.getImageFavouriteList() ?: emptyList()
-    }
-
-    private fun saveStationRequest(stationName: String) {
-        currentStationName = stationName
-        if (requestHistory.contains(stationName)) requestHistory.remove(stationName)
-        requestHistory.add(stationName)
     }
 
     private fun restoreStationRequest(): Boolean {
@@ -454,7 +379,9 @@ class ImageActivity : RxAppCompatActivity() {
         return true
     }
 
-    fun isFavouriteScreen() = currentStationName == IMAGE_FAVOURITE_LIST
+    fun isFavouriteScreen() = currentStationName.isFavouriteScreen()
+
+    fun String?.isFavouriteScreen() = this == IMAGE_FAVOURITE_LIST
 
     private fun String.formatStationName(): String {
         val startBrace = indexOf('(')

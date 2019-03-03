@@ -11,4 +11,6 @@
     <string name="error_load_image">Ошибка во время загрузки изображений</string>
     <string name="not_internet_connection">Отсутствует интернет соединение</string>
     <string name="need_permission">Для выполнения действия необходимо разрешение</string>
+    <string name="request_add_image">Добавьте изображения в избранное</string>
+    <string name="favourite">Избранное</string>
 </resources>
