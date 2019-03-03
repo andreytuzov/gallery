@@ -19,7 +19,6 @@ import android.support.v7.widget.RecyclerView
 import android.view.*
 import android.widget.TextView
 import android.widget.Toast
-import com.arasthel.spannedgridlayoutmanager.SpanSize
 import com.arasthel.spannedgridlayoutmanager.SpannedGridLayoutManager
 import com.crashlytics.android.Crashlytics
 import com.crashlytics.android.answers.Answers
@@ -60,7 +59,8 @@ class ImageActivity : RxAppCompatActivity() {
     private lateinit var root: View
     private val multiplyImageActionMode by lazy { MultiplyImageActionModeController(bottomAppBar, fab, this) }
 
-    private var lastSearchStationName: String? = null
+    // To avoid extra requests
+    private var currentStationName: String? = null
     private var permissionActions: MutableMap<Int, () -> Unit> = mutableMapOf()
 
     private val locationService by lazy {
@@ -121,11 +121,10 @@ class ImageActivity : RxAppCompatActivity() {
     }
 
     private fun showImage(stationName: String?) {
-        if (stationName != null && stationName != lastSearchStationName) {
+        if (stationName != null && stationName != currentStationName) {
             if (stationName == IMAGE_FAVOURITE_LIST) showFavouriteImage()
             else {
-                saveRequest(stationName)
-                lastSearchStationName = stationName
+                saveStationRequest(stationName)
                 showImageDisposable = loadImageObservable(stationName)
                         .io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
                         .subscribe({
@@ -147,17 +146,16 @@ class ImageActivity : RxAppCompatActivity() {
                     val stationName = stationNameList[0].first
                     if (stationName.isEmpty()) emptyList()
                     else {
-                        if (lastSearchStationName == stationName) listOf(Image.createEmptyImage())
+                        if (currentStationName == stationName) listOf(Image.createEmptyImage())
                         else {
-                            saveRequest(stationName)
-                            lastSearchStationName = stationName
+                            saveStationRequest(stationName)
                             val images = assetsPhotoDB.getPhotoList(stationName)
                             if (images != null) {
                                 val imageList = mutableListOf<Image>()
                                 imageList.addAll(images)
                                 imageList.shuffle(Random(System.currentTimeMillis()))
                                 this@ImageActivity.runOnUiThread {
-                                    snackBarHelper.show(StringUtils.getShortStation(stationName.formatStationName(), 33))
+                                    snackBarHelper.show(stationName.formatStationName().limitWithLastConsonant(AssetsPhotoDB.STATION_MAX_LENGTH))
                                 }
                                 imageList
                             } else null
@@ -174,9 +172,8 @@ class ImageActivity : RxAppCompatActivity() {
     }
 
     private fun showFavouriteImage(isImagesUpdate: Boolean = false) {
-        if (isImagesUpdate || lastSearchStationName != IMAGE_FAVOURITE_LIST) {
-            saveRequest(IMAGE_FAVOURITE_LIST)
-            lastSearchStationName = IMAGE_FAVOURITE_LIST
+        if (isImagesUpdate || currentStationName != IMAGE_FAVOURITE_LIST) {
+            saveStationRequest(IMAGE_FAVOURITE_LIST)
             showFavouriteImageDisposable = getFavouriteImageList().io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
                     .subscribe({
                         searchView.setSuggestions(null)
@@ -308,7 +305,7 @@ class ImageActivity : RxAppCompatActivity() {
         when {
             multiplyImageActionMode.mIsInActionMode -> multiplyImageActionMode.finishActionMode()
             searchView.isSearchOpen -> searchView.closeSearch()
-            else -> if (!restoreRequest()) super.onBackPressed()
+            else -> if (!restoreStationRequest()) super.onBackPressed()
         }
     }
 
@@ -333,7 +330,6 @@ class ImageActivity : RxAppCompatActivity() {
     private fun showSearchBar(animate: Boolean = true) {
         showHistoryStationSuggestion()
         searchView.showSearch(animate)
-        lastSearchStationName = null
     }
 
     private fun initToolbar() {
@@ -387,7 +383,7 @@ class ImageActivity : RxAppCompatActivity() {
 
 
     private fun getNearestStation() = Observable.fromCallable {
-        val location = SystemUtils.getLastKnownLocation(this)
+        val location = LocationUtils.getLastKnownLocation(this)
         if (location != null) assetsPhotoDB.getNearestStation(location, 10000)
         else emptyList()
     }
@@ -442,12 +438,13 @@ class ImageActivity : RxAppCompatActivity() {
         assetsPhotoDB.getImageFavouriteList() ?: emptyList()
     }
 
-    private fun saveRequest(request: String) {
-        if (requestHistory.contains(request)) requestHistory.remove(request)
-        requestHistory.add(request)
+    private fun saveStationRequest(stationName: String) {
+        currentStationName = stationName
+        if (requestHistory.contains(stationName)) requestHistory.remove(stationName)
+        requestHistory.add(stationName)
     }
 
-    private fun restoreRequest(): Boolean {
+    private fun restoreStationRequest(): Boolean {
         val size = requestHistory.size
         if (size <= 1) return false
         requestHistory.removeAt(size - 1)
@@ -457,7 +454,7 @@ class ImageActivity : RxAppCompatActivity() {
         return true
     }
 
-    fun isFavouriteScreen() = lastSearchStationName == IMAGE_FAVOURITE_LIST
+    fun isFavouriteScreen() = currentStationName == IMAGE_FAVOURITE_LIST
 
     private fun String.formatStationName(): String {
         val startBrace = indexOf('(')

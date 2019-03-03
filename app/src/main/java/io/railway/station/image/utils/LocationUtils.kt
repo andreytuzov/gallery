@@ -13,11 +13,7 @@ import io.railway.station.image.App
 import io.railway.station.image.api.StationsApi
 import java.io.OutputStream
 
-object SystemUtils {
-
-    fun hasConnection(context: Context) =
-            (context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager)
-                    .activeNetworkInfo?.isConnectedOrConnecting == true
+object LocationUtils {
 
     fun getLastKnownLocation(context: Context): Location? {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -38,22 +34,4 @@ object SystemUtils {
         }
         return null
     }
-
-    fun downloadToStream(url: String, outputStream: OutputStream) {
-        val request = Request.Builder().url(url).build()
-        val responseBody = StationsApi.okHttpClient.newCall(request).execute().body()
-        if (responseBody != null) {
-            val sink = Okio.buffer(Okio.sink(outputStream))
-            sink.writeAll(responseBody.source())
-        }
-    }
-
-    fun hasAccessFineLocationPermission() =
-            ContextCompat.checkSelfPermission(App.instance, Manifest.permission.ACCESS_FINE_LOCATION) ==
-                    PackageManager.PERMISSION_GRANTED
-
-
-    fun hasWriteExternalStoragePermission() =
-            ContextCompat.checkSelfPermission(App.instance, Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
-                    PackageManager.PERMISSION_GRANTED
 }

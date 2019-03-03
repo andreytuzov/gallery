@@ -85,31 +85,3 @@ object ViewUtils {
     }
 
 }
-
-fun SimpleDraweeView.loadImage(
-        imageUrl: String,
-        imageWidth: Int,
-        imageHeight: Int,
-        doAfterLoadImage: (() -> Unit)? = null,
-        doAfterFailure: (() -> Unit)? = null
-) {
-    val request = ImageRequestBuilder
-            .newBuilderWithSource(Uri.parse(imageUrl))
-            .setResizeOptions(ResizeOptions.forDimensions(imageWidth, imageHeight))
-
-    val listener = object : BaseControllerListener<ImageInfo>() {
-        override fun onFinalImageSet(id: String?, imageInfo: ImageInfo?, animatable: Animatable?) {
-            doAfterLoadImage?.invoke()
-        }
-
-        override fun onFailure(id: String?, throwable: Throwable?) {
-            doAfterFailure?.invoke()
-        }
-    }
-
-    controller = Fresco.newDraweeControllerBuilder()
-            .setOldController(controller)
-            .setControllerListener(listener)
-            .setImageRequest(request.build())
-            .build()
-}

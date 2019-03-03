@@ -61,7 +61,7 @@ class MultiplyImageActionModeController(
     fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.action_mode_download -> {
-                if (SystemUtils.hasConnection(mActivity)) {
+                if (NetUtils.hasConnection(mActivity)) {
                     downloadImages(mSelectedData!!.values, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path)
                     finishActionMode()
                 } else mActivity.snackBarHelper.show(mActivity.getString(R.string.not_internet_connection))
@@ -106,38 +106,19 @@ class MultiplyImageActionModeController(
 
     private fun downloadImages(images: Collection<Image>, directoryPath: String) {
         mActivity.executeAfterGetPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, ImageActivity.REQUEST_WRITE_EXTERNAL_STORAGE) {
-            if (SystemUtils.hasConnection(mActivity)) {
-                Observable.fromCallable {
-                    if (SystemUtils.hasWriteExternalStoragePermission()) {
-                        val directory = File(directoryPath + File.separatorChar + "stations_images")
-                        if (!directory.exists()) directory.mkdirs()
-                        for (image in images) {
-                            var fileName = image.description
-                            if (fileName.isNullOrBlank()) fileName = image.id.toString()
-                            val file = File(directory, "$fileName.jpeg")
-                            SystemUtils.downloadToStream(image.getFullImageUrl(), file.outputStream())
-                        }
-                    }
-                }.io(mActivity.bindUntilEvent<Any>(ActivityEvent.DESTROY))
-                        .subscribe({
-                            mActivity.snackBarHelper.show(mActivity.getString(R.string.all_image_loaded))
-                        }, {
-                            mActivity.snackBarHelper.show(mActivity.getString(R.string.error_load_image))
-                            K.e("Error during download images: $images", it)
-                        })
-            }
+            ImageUtils.downloadImages(images, directoryPath)
+                    .io(mActivity.bindUntilEvent<Any>(ActivityEvent.DESTROY))
+                    .subscribe({
+                        val msgId = if (it) R.string.all_image_loaded else R.string.error_load_image
+                        mActivity.snackBarHelper.show(mActivity.getString(msgId))
+                    }, {
+                        mActivity.snackBarHelper.show(mActivity.getString(R.string.error_load_image))
+                        K.e("Error during download images: $images", it)
+                    })
         }
-    }
-
-    private fun chooseDirectory() {
-        val intent = Intent(Intent.ACTION_GET_CONTENT)
-        mActivity.startActivityForResult(intent, REQUEST_CHOOSE_DIRECTORY)
     }
 
     fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode == REQUEST_CHOOSE_DIRECTORY && requestCode == Activity.RESULT_OK && data != null) {
-            downloadImages(mSelectedData!!.values, data.dataString)
-        }
     }
 
     private fun shareImages(images: Collection<Image>) {
@@ -166,7 +147,6 @@ class MultiplyImageActionModeController(
             })
 
     companion object {
-        private const val REQUEST_CHOOSE_DIRECTORY = 1230
         private const val ANIM_FAB_START_DURATION = 100L
         private const val ANIM_FAB_END_DURATION = 150L
     }

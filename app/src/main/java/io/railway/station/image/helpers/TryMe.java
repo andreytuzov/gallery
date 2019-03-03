@@ -1,4 +1,4 @@
-package io.railway.station.image.utils;
+package io.railway.station.image.helpers;
 
 public class TryMe implements Thread.UncaughtExceptionHandler {
 

@@ -7,8 +7,8 @@ import android.os.Handler
 import com.facebook.drawee.backends.pipeline.Fresco
 import org.apache.log4j.BasicConfigurator
 import io.railway.station.image.database.photos.AssetsPhotoDB
-import io.railway.station.image.utils.TooltipManager
-import io.railway.station.image.utils.TryMe
+import io.railway.station.image.helpers.TooltipManager
+import io.railway.station.image.helpers.TryMe
 
 class App : Application() {
 

@@ -46,19 +46,20 @@ object RUtils {
 
     fun convertPixelsToDp(value: Int, c: Context) = value / c.resources.displayMetrics.density
 
-    fun getDrawableCompat(resourceId: Int, context: Context): Drawable? {
-        return if (Build.VERSION.SDK_INT >= 21) context.getDrawable(resourceId) else context.resources.getDrawable(resourceId)
-    }
+    fun getDrawableCompat(resourceId: Int, context: Context) =
+            if (Build.VERSION.SDK_INT >= 21) context.getDrawable(resourceId) else context.resources.getDrawable(resourceId)
 
     // Haversine formula
-    fun convertDistanceToKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        return Geodesic.WGS84.Inverse(lat1, lon1, lat2, lon2, GeodesicMask.DISTANCE).s12
-//        val R = 6371e3
-//        val dLat = Math.toRadians(lat2 - lat1)
-//        val dLon = Math.toRadians(lon2 - lon1)
-//        val a = Math.pow(Math.sin(dLat / 2), 2.0) +
-//                Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin(dLon / 2), 2.0)
-//        var c = 2 * Math.atan2(Math.pow(a, 0.5), Math.pow(1 - a, 0.5))
-//        return R * c
+    fun convertDistanceToKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double) =
+            Geodesic.WGS84.Inverse(lat1, lon1, lat2, lon2, GeodesicMask.DISTANCE).s12
+
+    fun convertDistanceToKmManually(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val R = 6371e3
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = Math.pow(Math.sin(dLat / 2), 2.0) +
+                Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin(dLon / 2), 2.0)
+        var c = 2 * Math.atan2(Math.pow(a, 0.5), Math.pow(1 - a, 0.5))
+        return R * c
     }
 }

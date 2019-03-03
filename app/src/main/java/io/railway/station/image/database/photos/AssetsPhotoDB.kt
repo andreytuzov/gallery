@@ -11,7 +11,7 @@ import io.railway.station.image.App
 import io.railway.station.image.database.AssetsDBLoader
 import io.railway.station.image.utils.K
 import io.railway.station.image.utils.RUtils
-import io.railway.station.image.utils.StringUtils
+import io.railway.station.image.utils.limitWithLastConsonant
 import java.lang.StringBuilder
 import java.util.*
 
@@ -225,7 +225,7 @@ class AssetsPhotoDB(private val context: Context) {
     private fun String.formatStationName(): String {
         var result = this
         if (length > STATION_MAX_LENGTH) {
-            result = StringUtils.getShortStation(this, STATION_MAX_LENGTH)
+            result = limitWithLastConsonant(STATION_MAX_LENGTH)
         }
         val brace = result.indexOf('(')
         if (brace != -1) result = result.substring(0, brace)
@@ -268,7 +268,7 @@ class AssetsPhotoDB(private val context: Context) {
 
     companion object {
 
-        private const val STATION_MAX_LENGTH = 33
+        const val STATION_MAX_LENGTH = 33
 
         const val SQL_SELECT_IMAGE = "select image._id, url, description from image, station where image.stationID = station._id and station.name like"
         const val SQL_SELECT_STATION = "SELECT _id, name, latitude, longitude FROM stationWithImage WHERE name LIKE"
