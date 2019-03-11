@@ -70,12 +70,22 @@
 
             <View
                 android:layout_width="match_parent"
-                android:layout_height="1dip"
+                android:layout_height="1dp"
                 android:layout_alignParentBottom="true"
-                android:background="#fff"
-                android:backgroundTint="#10000000" />
-        </RelativeLayout>
+                android:background="#DEF1EF" />
 
+            <ProgressBar
+                android:id="@+id/progressBar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_alignParentBottom="true"
+                android:background="@drawable/dr_search_view_progress_bg"
+                android:indeterminate="false"
+                android:progressBackgroundTint="@android:color/white"
+                android:progressTint="@android:color/white"
+                android:visibility="gone" />
+        </RelativeLayout>
 
         <ListView
             android:id="@+id/suggestion_list"

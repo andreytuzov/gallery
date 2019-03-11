@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Gallery stations</string>
+    <string name="app_name">Stations</string>
     <string name="image_msg_not_found">​​No images for this station</string>
     <string name="searchview_search">Search</string>
     <string name="action_favourite">Избранное</string>
@@ -13,4 +13,6 @@
     <string name="need_permission">Для выполнения действия необходимо разрешение</string>
     <string name="request_add_image">Добавьте изображения в избранное</string>
     <string name="favourite">Избранное</string>
+    <string name="request_turn_on_gps">Пожалуйста, включите GPS</string>
+    <string name="error_turn_on_gps">Ошибка во время включения GPS</string>
 </resources>

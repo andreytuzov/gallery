@@ -31,6 +31,7 @@
         android:layout_height="wrap_content"
         android:elevation="0dp"
         android:src="@drawable/ic_menu_search_location"
+        app:backgroundTint="@drawable/dr_nearest_station_button_bg"
         app:elevation="0dp"
         app:layout_anchor="@id/bottomAppBar" />
 

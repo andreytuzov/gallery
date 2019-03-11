@@ -31,6 +31,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ListAdapter;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -48,6 +49,7 @@ public class MaterialSearchView extends FrameLayout implements Filter.FilterList
     private boolean mIsSearchOpen = false;
     private int mAnimationDuration;
     private boolean mClearingFocus;
+    private boolean mIsProgressBarVisible = false;
 
     //Views
     private View mSearchLayout;
@@ -59,6 +61,7 @@ public class MaterialSearchView extends FrameLayout implements Filter.FilterList
     private ImageButton mLocationBtn;
     private ImageButton mEmptyBtn;
     private RelativeLayout mSearchTopBar;
+    private ProgressBar mProgressBar;
 
     private CharSequence mOldQueryText;
     private CharSequence mUserQuery;
@@ -157,6 +160,7 @@ public class MaterialSearchView extends FrameLayout implements Filter.FilterList
         mLocationBtn = (ImageButton) mSearchLayout.findViewById(R.id.action_location_btn);
         mEmptyBtn = (ImageButton) mSearchLayout.findViewById(R.id.action_empty_btn);
         mTintView = mSearchLayout.findViewById(R.id.transparent_view);
+        mProgressBar = (ProgressBar) mSearchLayout.findViewById(R.id.progressBar);
 
         mSearchSrcTextView.setOnClickListener(mOnClickListener);
         mBackBtn.setOnClickListener(mOnClickListener);
@@ -504,6 +508,21 @@ public class MaterialSearchView extends FrameLayout implements Filter.FilterList
         showSearch(true);
     }
 
+    private void updateIsProgressBarVisible(boolean isVisible) {
+        mProgressBar.setIndeterminate(isVisible);
+        mProgressBar.setVisibility(isVisible ? View.VISIBLE : View.GONE);
+    }
+
+    public void setIsProgressBarVisible(boolean visible) {
+        mIsProgressBarVisible = visible;
+        updateIsProgressBarVisible(mSearchLayout.getVisibility() == View.VISIBLE && visible);
+    }
+
+    private void searchLayoutVisibility(int visibility) {
+        mSearchLayout.setVisibility(visibility);
+        updateIsProgressBarVisible(visibility == View.VISIBLE && mIsProgressBarVisible);
+    }
+
     /**
      * Open Search View. If animate is true, Animate the showing of the view.
      *
@@ -522,7 +541,7 @@ public class MaterialSearchView extends FrameLayout implements Filter.FilterList
             setVisibleWithAnimation();
 
         } else {
-            mSearchLayout.setVisibility(VISIBLE);
+            searchLayoutVisibility(VISIBLE);
             if (mSearchViewListener != null) {
                 mSearchViewListener.onSearchViewShown();
             }
@@ -552,7 +571,7 @@ public class MaterialSearchView extends FrameLayout implements Filter.FilterList
         };
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            mSearchLayout.setVisibility(View.VISIBLE);
+            searchLayoutVisibility(View.VISIBLE);
             AnimationUtil.reveal(mSearchTopBar, animationListener);
 
         } else {
@@ -572,7 +591,7 @@ public class MaterialSearchView extends FrameLayout implements Filter.FilterList
         dismissSuggestions();
         clearFocus();
 
-        mSearchLayout.setVisibility(GONE);
+        searchLayoutVisibility(GONE);
         if (mSearchViewListener != null) {
             mSearchViewListener.onSearchViewClosed();
         }

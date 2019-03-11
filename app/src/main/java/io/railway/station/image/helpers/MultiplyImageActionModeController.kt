@@ -7,6 +7,7 @@ import android.os.Environment
 import android.support.design.bottomappbar.BottomAppBar
 import android.support.design.widget.FloatingActionButton
 import android.view.MenuItem
+import android.view.View
 import com.trello.rxlifecycle2.android.ActivityEvent
 import io.reactivex.Observable
 import io.railway.station.image.ImageActivity
@@ -49,7 +50,11 @@ class MultiplyImageActionModeController(
         mBottomAppBar.hideOnScroll = true
         mFab.setImageDrawable(RUtils.getDrawableCompat(R.drawable.ic_menu_search_location, mActivity))
         createTransitionAnimation(false, R.menu.activity_image).start()
-        mFab.setOnClickListener { mActivity.showNearestImage() }
+        mFab.setOnClickListener(object: DebouncedOnClickListener() {
+            override fun onClicked(v: View) {
+                mActivity.showNearestImage()
+            }
+        })
     }
 
     fun updateSelectedData(selectedData: Map<Int, Image>) {

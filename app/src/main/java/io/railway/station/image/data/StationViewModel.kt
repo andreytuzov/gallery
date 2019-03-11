@@ -3,10 +3,10 @@ package io.railway.station.image.data
 import android.arch.lifecycle.Lifecycle
 import android.arch.lifecycle.LifecycleObserver
 import android.arch.lifecycle.OnLifecycleEvent
+import android.location.Location
 import io.railway.station.image.App
 import io.railway.station.image.database.photos.AssetsPhotoDB
 import io.railway.station.image.database.photos.Image
-import io.railway.station.image.utils.LocationUtils
 import io.reactivex.Completable
 import io.reactivex.Observable
 import java.lang.IllegalArgumentException
@@ -33,11 +33,19 @@ class StationViewModel : LifecycleObserver {
     fun saveStationToHistory(stationName: String) =
             Completable.fromCallable { assetsPhotoDB.addStationToHistory(stationName) }
 
-    fun getNearestStation() = Observable.fromCallable {
-        val location = LocationUtils.getLastKnownLocation(App.instance)
-        if (location != null) assetsPhotoDB.getNearestStation(location, 10000)
-        else emptyList()
+    fun getNearestStationByLocation(location: Location) = Observable.fromCallable {
+        assetsPhotoDB.getNearestStation(location, 10000) ?: emptyList()
     }
+
+    fun getNearestImageByLocation(location: Location) =
+            getNearestStationByLocation(location).map {
+                val stationName = it.getOrNull(0)?.first
+                        ?: throw IllegalArgumentException("Station was not found")
+                Pair(stationName, getImageByPattern(stationName)
+                        .map {
+                            it.shuffled(Random(System.currentTimeMillis()))
+                        }.blockingFirst())
+            }
 
     fun getHistoryStation() = Observable.fromCallable {
         assetsPhotoDB.getStationHistoryList() ?: emptyList()
@@ -51,16 +59,6 @@ class StationViewModel : LifecycleObserver {
 
     fun getFavouriteImage() =
             Observable.fromCallable { assetsPhotoDB.getImageFavouriteList() ?: emptyList() }
-
-    fun getNearestImage() =
-            getNearestStation().map {
-                val stationName = it.getOrNull(0)?.first
-                        ?: throw IllegalArgumentException("Station was not found")
-                Pair(stationName, getImageByPattern(stationName)
-                        .map {
-                            it.shuffled(Random(System.currentTimeMillis()))
-                        }.blockingFirst())
-            }
 
     fun addImageToFavourite(ids: List<Int>) {
         assetsPhotoDB.addImageListToFavourite(ids)

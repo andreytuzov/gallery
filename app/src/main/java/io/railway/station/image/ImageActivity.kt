@@ -31,10 +31,13 @@ import io.railway.station.image.data.StationViewModel
 import io.railway.station.image.database.photos.AssetsPhotoDB
 import io.railway.station.image.database.photos.Image
 import io.railway.station.image.helpers.AppCompatBottomAppBar
+import io.railway.station.image.helpers.DebouncedOnClickListener
 import io.railway.station.image.helpers.MultiplyImageActionModeController
 import io.railway.station.image.utils.*
+import io.reactivex.Observable
 import io.reactivex.disposables.CompositeDisposable
-import kotlin.math.roundToInt
+import io.reactivex.disposables.Disposable
+import io.reactivex.subjects.PublishSubject
 
 class ImageActivity : RxAppCompatActivity() {
 
@@ -56,9 +59,21 @@ class ImageActivity : RxAppCompatActivity() {
     private var currentStationName: String? = null
     private var permissionActions: MutableMap<Int, () -> Unit> = mutableMapOf()
 
+    private val turnOnGpsSubject by lazy { PublishSubject.create<Boolean>() }
+    private var locationSubject = PublishSubject.create<Location>()
+
+    private var isLocationRegistred = false
+
     private val locationService by lazy {
+
         object : LocationListener {
-            override fun onLocationChanged(location: Location?) {}
+            override fun onLocationChanged(location: Location?) {
+                if (location != null && !locationSubject.hasComplete()) {
+                    locationSubject.onNext(location)
+                    locationSubject.onComplete()
+                }
+            }
+
             override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
             override fun onProviderEnabled(provider: String?) {}
             override fun onProviderDisabled(provider: String?) {}
@@ -66,22 +81,35 @@ class ImageActivity : RxAppCompatActivity() {
     }
 
     private var compositeDisposable = CompositeDisposable()
+    private var showNearestImageDisposable: Disposable? = null
+    private var showNearestStationDisposable: Disposable? = null
     private var isNeedStartSearch: Boolean = false
 
+    private fun getLocationObservable(): Observable<Location> {
+        locationSubject.onComplete()
+        locationSubject = PublishSubject.create()
+        return locationSubject
+                .doOnSubscribe { registerLocationListener() }
+                .doFinally { unregisterLocationListener() }
+    }
+
     private fun showNearestStationSuggestion() {
+        if (isLocationRegistred) return
         executeAfterGetPermission(Manifest.permission.ACCESS_FINE_LOCATION, REQUEST_ACCESS_FINE_LOCATION) {
-            val disposable = stationViewModel.getNearestStation()
-                    .io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
-                    .subscribe({
-                        if (it != null) {
-                            searchView.setSuggestions(it.map { it.first }.toTypedArray())
-                            isNeedStartSearch = true
-                            searchView.hideKeyboard(searchView)
-                        }
-                    }, {
-                        K.e("Error during getting nearest station", it)
-                    })
-            compositeDisposable.add(disposable)
+            executeAfterTurnOnGps {
+                showNearestStationDisposable = getLocationObservable()
+                        .flatMap { stationViewModel.getNearestStationByLocation(it) }
+                        .io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
+                        .subscribe({
+                            if (it != null) {
+                                searchView.setSuggestions(it.map { it.first }.toTypedArray())
+                                isNeedStartSearch = true
+                                searchView.hideKeyboard(searchView)
+                            }
+                        }, {
+                            K.e("Error during getting nearest station", it)
+                        })
+            }
         }
     }
 
@@ -131,15 +159,24 @@ class ImageActivity : RxAppCompatActivity() {
     }
 
     fun showNearestImage() {
+        if (isLocationRegistred) {
+            unregisterLocationListener()
+            if (showNearestImageDisposable?.isDisposed == false) showNearestImageDisposable?.dispose()
+            showNearestImageDisposable = null
+            return
+        }
         executeAfterGetPermission(Manifest.permission.ACCESS_FINE_LOCATION, REQUEST_ACCESS_FINE_LOCATION) {
-            val disposable = stationViewModel.getNearestImage()
-                    .io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
-                    .subscribe({
-                        updateStationData(it.second, it.first)
-                    }, {
-                        K.e("Error during find nearest image", it)
-                    })
-            compositeDisposable.add(disposable)
+            executeAfterTurnOnGps {
+                showNearestImageDisposable = getLocationObservable()
+                        .flatMap { stationViewModel.getNearestImageByLocation(it) }
+                        .io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
+                        .subscribe({
+                            updateStationData(it.second, it.first)
+                        }, {
+                            snackBarHelper.show(getString(R.string.image_msg_not_found))
+                            K.e("Error during find nearest image", it)
+                        })
+            }
         }
     }
 
@@ -155,7 +192,7 @@ class ImageActivity : RxAppCompatActivity() {
 
     private fun updateStationData(images: List<Image>?, stationName: String) {
         searchView.setSuggestions(null)
-        if (images.isNullOrEmpty()) snackBarHelper.show(getString(R.string.image_msg_not_found))
+        if (images?.isNotEmpty() != true) snackBarHelper.show(getString(R.string.image_msg_not_found))
         else {
             val msg = if (stationName.isFavouriteScreen()) getString(R.string.favourite)
             else stationName.formatStationName().limitWithLastConsonant(AssetsPhotoDB.STATION_MAX_LENGTH)
@@ -216,11 +253,6 @@ class ImageActivity : RxAppCompatActivity() {
         }
     }
 
-    override fun onStart() {
-        super.onStart()
-        registerLocationListener()
-    }
-
     override fun onStop() {
         super.onStop()
         unregisterLocationListener()
@@ -229,6 +261,8 @@ class ImageActivity : RxAppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         if (!compositeDisposable.isDisposed) compositeDisposable.dispose()
+        if (showNearestImageDisposable?.isDisposed == false) showNearestImageDisposable?.dispose()
+        if (showNearestStationDisposable?.isDisposed == false) showNearestStationDisposable?.dispose()
     }
 
     fun executeAfterGetPermission(permissionName: String, requestCode: Int, block: () -> Unit) {
@@ -241,10 +275,23 @@ class ImageActivity : RxAppCompatActivity() {
         }
     }
 
+    /**
+     * If gps is not enabled then we show the dialog to enable gps and result goes into onActivityResult method
+     */
+    fun executeAfterTurnOnGps(block: () -> Unit) {
+        val disposable = turnOnGpsSubject
+                .firstElement()
+                .subscribe {
+                    if (it) block()
+                    else snackBarHelper.show(getString(R.string.request_turn_on_gps))
+                }
+        LocationUtils.checkGpsEnabled(this, turnOnGpsSubject)
+        compositeDisposable.add(disposable)
+    }
+
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            if (requestCode == REQUEST_ACCESS_FINE_LOCATION) registerLocationListener()
             permissionActions[requestCode]?.invoke()
         } else {
             permissionActions.remove(requestCode)
@@ -259,6 +306,8 @@ class ImageActivity : RxAppCompatActivity() {
                 val text = matches[0]
                 if (text.isNotEmpty()) searchView.setQuery(text, true)
             }
+        } else if (requestCode == REQUEST_TURN_ON_GPS) {
+            turnOnGpsSubject.onNext(resultCode == Activity.RESULT_OK)
         } else multiplyImageActionMode.onActivityResult(requestCode, resultCode, data)
         super.onActivityResult(requestCode, resultCode, data)
     }
@@ -322,11 +371,23 @@ class ImageActivity : RxAppCompatActivity() {
                         else -> false
                     }
         })
+        searchView.setOnSearchViewListener(object : MaterialSearchView.SearchViewListener {
+            override fun onSearchViewShown() {
+            }
+
+            override fun onSearchViewClosed() {
+                if (showNearestStationDisposable?.isDisposed == false) showNearestStationDisposable?.dispose()
+            }
+        })
     }
 
     private fun initBottomBar() {
         fab = findViewById(R.id.fab)
-        fab.setOnClickListener { showNearestImage() }
+        fab.setOnClickListener(object : DebouncedOnClickListener() {
+            override fun onClicked(v: View) {
+                showNearestImage()
+            }
+        })
         bottomAppBar = findViewById(R.id.bottomAppBar)
         setSupportActionBar(bottomAppBar)
         snackBarHelper = SnackBarHelper(findViewById(R.id.snackBar))
@@ -334,29 +395,44 @@ class ImageActivity : RxAppCompatActivity() {
 
 
     private fun registerLocationListener() {
+        if (isLocationRegistred) return
         // Check permission
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
-
             val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
             val gpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
             val networkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
 
             // If gps is not available
             if (gpsEnabled || networkEnabled) {
+                isLocationRegistred = true
+                App.handler.post {
+                    searchView.setIsProgressBarVisible(true)
+                }
                 // Request location
-                locationManager.requestLocationUpdates(if (gpsEnabled) LocationManager.GPS_PROVIDER
-                else LocationManager.NETWORK_PROVIDER, 1000L, 0F, locationService)
+                if (gpsEnabled) {
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0F, locationService, Looper.getMainLooper())
+                }
+                if (networkEnabled) {
+                    locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0F, locationService, Looper.getMainLooper())
+                }
+                fab.isActivated = true
             }
         }
     }
 
     private fun unregisterLocationListener() {
+        if (!isLocationRegistred) return
         // Check permission
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
+            isLocationRegistred = false
+            App.handler.post {
+                searchView.setIsProgressBarVisible(false)
+            }
             val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
             locationManager.removeUpdates(locationService)
+            fab.isActivated = false
         }
     }
 
@@ -387,15 +463,6 @@ class ImageActivity : RxAppCompatActivity() {
         val startBrace = indexOf('(')
         if (startBrace != -1) return substring(0, startBrace)
         return this
-    }
-
-    private fun Double.formatDistance(): String {
-        val value = this / 1000
-        return when {
-            value >= 10 -> String.format("%.1f км", value)
-            value >= 1 -> String.format("%.2f км", value)
-            else -> String.format("%s м", (value * 1000).roundToInt())
-        }
     }
 
     class SnackBarHelper(private val snackBarView: ViewGroup) {
@@ -453,6 +520,7 @@ class ImageActivity : RxAppCompatActivity() {
 
         const val REQUEST_ACCESS_FINE_LOCATION = 123
         const val REQUEST_WRITE_EXTERNAL_STORAGE = 124
+        const val REQUEST_TURN_ON_GPS = 200
 
         const val IMAGE_FAVOURITE_LIST = "imageFavouriteList"
 
