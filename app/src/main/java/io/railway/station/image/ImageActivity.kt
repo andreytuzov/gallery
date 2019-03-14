@@ -31,13 +31,13 @@ import io.railway.station.image.data.StationViewModel
 import io.railway.station.image.database.photos.AssetsPhotoDB
 import io.railway.station.image.database.photos.Image
 import io.railway.station.image.helpers.AppCompatBottomAppBar
-import io.railway.station.image.helpers.DebouncedOnClickListener
 import io.railway.station.image.helpers.MultiplyImageActionModeController
 import io.railway.station.image.utils.*
 import io.reactivex.Observable
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.disposables.Disposable
 import io.reactivex.subjects.PublishSubject
+import io.stellio.player.Helpers.setOnClickDebounceListener
 
 class ImageActivity : RxAppCompatActivity() {
 
@@ -383,11 +383,7 @@ class ImageActivity : RxAppCompatActivity() {
 
     private fun initBottomBar() {
         fab = findViewById(R.id.fab)
-        fab.setOnClickListener(object : DebouncedOnClickListener() {
-            override fun onClicked(v: View) {
-                showNearestImage()
-            }
-        })
+        fab.setOnClickDebounceListener { showNearestImage() }
         bottomAppBar = findViewById(R.id.bottomAppBar)
         setSupportActionBar(bottomAppBar)
         snackBarHelper = SnackBarHelper(findViewById(R.id.snackBar))

@@ -1,4 +1,4 @@
-package io.railway.station.image.helpers
+package io.stellio.player.Helpers
 
 import android.view.View
 import io.reactivex.android.schedulers.AndroidSchedulers
@@ -6,12 +6,12 @@ import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.PublishSubject
 import java.util.concurrent.TimeUnit
 
-abstract class DebouncedOnClickListener : View.OnClickListener {
+abstract class DebouncedOnClickListener(thresholdTime: Long = THRESHOLD_MILLIS) : View.OnClickListener {
 
     private val subject = PublishSubject.create<View>()
 
     init {
-        subject.throttleFirst(THRESHOLD_MILLIS, TimeUnit.MILLISECONDS)
+        subject.throttleFirst(thresholdTime, TimeUnit.MILLISECONDS)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe({ onClicked(it) })
@@ -24,7 +24,24 @@ abstract class DebouncedOnClickListener : View.OnClickListener {
     abstract fun onClicked(v: View)
 
     companion object {
-        private const val THRESHOLD_MILLIS = 600L
+        const val THRESHOLD_MILLIS = 300L
     }
 
+}
+
+fun View.setOnClickDebounceListener(
+        listener: (View) -> Unit
+) {
+    setOnClickDebounceListener(listener, DebouncedOnClickListener.THRESHOLD_MILLIS)
+}
+
+fun View.setOnClickDebounceListener(
+        listener: (View) -> Unit,
+        thresholdTime: Long
+) {
+    setOnClickListener(object : DebouncedOnClickListener(thresholdTime) {
+        override fun onClicked(v: View) {
+            listener(v)
+        }
+    })
 }

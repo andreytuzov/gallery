@@ -14,7 +14,7 @@ import io.railway.station.image.ImageActivity
 import io.railway.station.image.R
 import io.railway.station.image.database.photos.Image
 import io.railway.station.image.utils.*
-import java.io.File
+import io.stellio.player.Helpers.setOnClickDebounceListener
 import java.lang.StringBuilder
 
 class MultiplyImageActionModeController(
@@ -50,11 +50,7 @@ class MultiplyImageActionModeController(
         mBottomAppBar.hideOnScroll = true
         mFab.setImageDrawable(RUtils.getDrawableCompat(R.drawable.ic_menu_search_location, mActivity))
         createTransitionAnimation(false, R.menu.activity_image).start()
-        mFab.setOnClickListener(object: DebouncedOnClickListener() {
-            override fun onClicked(v: View) {
-                mActivity.showNearestImage()
-            }
-        })
+        mFab.setOnClickDebounceListener { mActivity.showNearestImage() }
     }
 
     fun updateSelectedData(selectedData: Map<Int, Image>) {
