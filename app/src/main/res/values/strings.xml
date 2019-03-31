@@ -1,8 +1,8 @@
 <resources>
-    <string name="app_name">Stations</string>
-    <string name="image_msg_not_found">​​No images for this station</string>
+    <string name="app_name">ЖД Станции</string>
+    <string name="image_msg_not_found">​​Изображения для станции не найдены</string>
     <string name="favourite_image_msg_not_found">Добавьте изображения в избранное</string>
-    <string name="searchview_search">Search</string>
+    <string name="searchview_search">Поиск станции</string>
     <string name="action_favourite">Избранное</string>
     <string name="action_mode_favourite">Добавить в избранное</string>
     <string name="action_mode_favourite_delete">Удалить из избранного</string>
