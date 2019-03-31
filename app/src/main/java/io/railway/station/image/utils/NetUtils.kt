@@ -6,6 +6,9 @@ import io.railway.station.image.api.StationsApi
 import okhttp3.Request
 import okio.Okio
 import java.io.OutputStream
+import java.lang.Exception
+import java.net.HttpURLConnection
+import java.net.URL
 
 object NetUtils {
 
@@ -21,5 +24,15 @@ object NetUtils {
             sink.writeAll(responseBody.source())
         }
     }
+
+    fun checkUrl(url: String) =
+            try {
+                HttpURLConnection.setFollowRedirects(false)
+                val connection = URL(url).openConnection() as HttpURLConnection
+                connection.requestMethod = "HEAD"
+                connection.responseCode == HttpURLConnection.HTTP_OK
+            } catch (e: Exception) {
+                false
+            }
 
 }

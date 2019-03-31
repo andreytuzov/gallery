@@ -78,8 +78,11 @@ class AssetsPhotoDB(private val context: Context) {
 
     fun getStationNameList(stationName: String) = getStationListByName(stationName)?.map { it.name }
 
-    fun getPhotoList(stationName: String): List<Image>? {
-        val sql = "$SQL_SELECT_IMAGE '$stationName%'"
+    fun getFullPhotoList() = getPhotoList("%", "image._id")
+
+    fun getPhotoList(stationName: String, sort: String? = null): List<Image>? {
+        val orderBy = if (sort != null) "order by $sort" else ""
+        val sql = "$SQL_SELECT_IMAGE '$stationName%' $orderBy"
         return db!!.rawQuery(sql, null).useCursor {
             if (it.moveToFirst()) {
                 val imageList = mutableListOf<Image>()
@@ -177,7 +180,7 @@ class AssetsPhotoDB(private val context: Context) {
         db!!.endTransaction()
     }
 
-    fun removeImageListFromFavourite(imageListId: List<Int>) {
+    fun removeImageList(imageListId: List<Int>, tableName: String = Schemas.TABLE_IMAGE) {
         val ids = StringBuilder()
         for (i in 0 until imageListId.size) {
             val imageId = imageListId[i]
@@ -186,8 +189,12 @@ class AssetsPhotoDB(private val context: Context) {
         }
         if (ids.isNotEmpty()) {
             ids.append(")")
-            db!!.delete(Schemas.TABLE_FAVOURITE, Schemas.COLUMN_FAVOURITE_ID + " in $ids", null)
+            db!!.delete(tableName, "_id in $ids", null)
         }
+    }
+
+    fun removeImageListFromFavourite(imageListId: List<Int>) {
+        removeImageList(imageListId, Schemas.TABLE_FAVOURITE)
     }
 
     fun isImageFavourite(imageId: Int) =

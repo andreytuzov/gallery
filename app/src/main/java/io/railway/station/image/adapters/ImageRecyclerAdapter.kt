@@ -50,27 +50,31 @@ class ImageRecyclerAdapter(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, position: Int): ImageRecyclerViewHolder {
+
+        fun isItemHasImage(itemView: View) =
+                itemView.findViewById<SimpleDraweeView?>(R.id.imageView)?.hierarchy?.hasImage() == true
+
         val holder = ImageRecyclerViewHolder(inflater.inflate(R.layout.list_item_image, parent, false))
         holder.imageView.isSaveEnabled = false
         holder.itemView.setOnLongClickListener {
             val adapterPosition = holder.adapterPosition
             if (adapterPosition != RecyclerView.NO_POSITION) {
-                val data = mData?.get(adapterPosition)
-                if (data != null) onItemLongClick(data)
+                if (isItemHasImage(it)) onItemLongClick(adapterPosition)
+                else notifyItemChanged(adapterPosition)
             }
             true
         }
         holder.itemView.setOnClickListener {
             val adapterPosition = holder.adapterPosition
             if (adapterPosition != RecyclerView.NO_POSITION) {
-                if (controller?.mIsInActionMode == false) {
-                    ImageViewer.Builder<String>(context, mData!!.map { it.getFullImageUrl() })
-                            .setStartPosition(adapterPosition)
-                            .setImageChangeListener { Toast.makeText(context, mData!![it].description, Toast.LENGTH_LONG).show() }
-                            .show()
-                } else {
-                    onItemClick(mData!![adapterPosition])
-                }
+                if (isItemHasImage(it)) {
+                    if (controller?.mIsInActionMode == false) {
+                        ImageViewer.Builder<String>(context, mData!!.map { it.getFullImageUrl() })
+                                .setStartPosition(adapterPosition)
+                                .setImageChangeListener { Toast.makeText(context, mData!![it].description, Toast.LENGTH_LONG).show() }
+                                .show()
+                    } else onItemClick(adapterPosition)
+                } else notifyItemChanged(adapterPosition)
             }
         }
         return holder
@@ -132,18 +136,20 @@ class ImageRecyclerAdapter(
 
     private fun isItemSelected(imageId: Int) = selected?.contains(imageId) == true
 
-    private fun onItemLongClick(image: Image) {
+    private fun onItemLongClick(position: Int) {
         if (controller != null) {
+            val image = mData?.get(position) ?: return
             if (!controller!!.mIsInActionMode) {
                 selected = mutableMapOf(Pair(image.id, image))
                 countSelected = 1
                 controller!!.startActionMode(selected!!)
-                notifyDataSetChanged()
-            } else onItemClick(image)
+            } else onItemClick(position)
+            notifyItemChanged(position)
         }
     }
 
-    private fun onItemClick(image: Image) {
+    private fun onItemClick(position: Int) {
+        val image = mData?.get(position) ?: return
         if (selected!!.contains(image.id)) {
             selected!!.remove(image.id)
             countSelected--
@@ -159,7 +165,7 @@ class ImageRecyclerAdapter(
             selected!![image.id] = image
             controller!!.updateSelectedData(selected!!)
         }
-        notifyDataSetChanged()
+        notifyItemChanged(position)
     }
 
 
@@ -168,6 +174,6 @@ class ImageRecyclerAdapter(
     }
 
     companion object {
-        private val MIN_IMAGE_SIZE = RUtils.convertDpToPixels(100, App.instance).toInt()
+        private val MIN_IMAGE_SIZE = RUtils.convertDpToPixels(80, App.instance).toInt()
     }
 }
