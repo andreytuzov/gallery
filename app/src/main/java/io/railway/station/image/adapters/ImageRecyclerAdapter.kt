@@ -9,6 +9,7 @@ import android.view.WindowManager
 import android.widget.Toast
 import com.facebook.drawee.view.SimpleDraweeView
 import com.stfalcon.frescoimageviewer.ImageViewer
+import io.railway.station.image.App
 import io.railway.station.image.R
 import io.railway.station.image.database.photos.Image
 import io.railway.station.image.helpers.MultiplyImageActionModeController
@@ -19,15 +20,24 @@ import io.railway.station.image.utils.loadImage
 class ImageRecyclerAdapter(
         private val context: Context,
         private var columnCount: Int,
-        private var isLowQuality: Boolean
+        private var isLowQuality: Boolean,
+        private val updateColumnCount: (Int) -> Unit
 ) : RecyclerView.Adapter<ImageRecyclerAdapter.ImageRecyclerViewHolder>() {
 
     private val inflater = LayoutInflater.from(context)
 
     private var mData: MutableList<Image>? = null
 
+    private val flexColumnCount
+        get() = Math.min(columnCount, mData?.size ?: columnCount)
+
+    private val flexMaxColumnCount: Int
+        get() {
+            val maxColumnCount = screenSize / MIN_IMAGE_SIZE
+            return Math.min(mData?.size ?: maxColumnCount, maxColumnCount)
+        }
+
     private val screenSize = RUtils.getScreenWidth(context.getSystemService(Context.WINDOW_SERVICE) as WindowManager)
-    private val maxColumnCount = screenSize / RUtils.convertDpToPixels(100, context).toInt()
 
     private var imageSize: Int = 0
 
@@ -83,13 +93,18 @@ class ImageRecyclerAdapter(
 
     private fun setColumnCount(columnCount: Int) {
         this.columnCount = columnCount
-        imageSize = screenSize / columnCount
+        updateImageSize()
     }
 
-    fun nextColumnCount(): Int {
-        val columnCount = if (columnCount > maxColumnCount) 1 else this.columnCount + 1
+    private fun updateImageSize() {
+        imageSize = screenSize / flexColumnCount
+        updateColumnCount(flexColumnCount)
+    }
+
+    fun nextColumnCount() {
+        val columnCount = if (columnCount >= flexMaxColumnCount) 1 else this.columnCount + 1
         setColumnCount(columnCount)
-        return columnCount
+        notifyDataSetChanged()
     }
 
     fun nextImageQuality() {
@@ -100,6 +115,7 @@ class ImageRecyclerAdapter(
     fun setData(data: List<Image>?) {
         if (!data.isNullOrEmpty()) {
             mData = data.toMutableList()
+            updateImageSize()
             notifyDataSetChanged()
         }
     }
@@ -149,5 +165,9 @@ class ImageRecyclerAdapter(
 
     class ImageRecyclerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val imageView = itemView.findViewById<SimpleDraweeView>(R.id.imageView)
+    }
+
+    companion object {
+        private val MIN_IMAGE_SIZE = RUtils.convertDpToPixels(100, App.instance).toInt()
     }
 }

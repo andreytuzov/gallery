@@ -243,12 +243,16 @@ class ImageActivity : RxAppCompatActivity() {
         // Get name of station
         recyclerView = findViewById(R.id.recyclerView)
         val columnCount = App.pref.getInt(PREF_COLUMN_COUNT, DEFAULT_COLUMN_COUNT)
-        adapter = ImageRecyclerAdapter(this, columnCount, isImageQualityBad)
-        adapter.setMultiplyImageActionModeController(multiplyImageActionMode)
-        recyclerView.adapter = adapter
         layoutManager = GridLayoutManager(this, columnCount, GridLayoutManager.VERTICAL,
                 false)
         recyclerView.layoutManager = layoutManager
+        adapter = ImageRecyclerAdapter(this, columnCount, isImageQualityBad) {
+            layoutManager.spanCount = it
+            App.pref.edit().putInt(PREF_COLUMN_COUNT, it).apply()
+        }
+        adapter.setMultiplyImageActionModeController(multiplyImageActionMode)
+        recyclerView.adapter = adapter
+
 
         stationViewModel = StationViewModel()
         lifecycle.addObserver(stationViewModel)
@@ -338,10 +342,7 @@ class ImageActivity : RxAppCompatActivity() {
             }
             R.id.action_search -> showSearchBar()
             R.id.action_favourite -> showFavouriteImage()
-            R.id.action_column_count -> {
-                layoutManager.spanCount = adapter.nextColumnCount()
-                adapter.notifyDataSetChanged()
-            }
+            R.id.action_column_count -> adapter.nextColumnCount()
             R.id.action_image_quality -> {
                 val isImageQualityBad = !this.isImageQualityBad
                 App.pref.edit().putBoolean(PREF_IS_IMAGE_QUALITY_BAD, isImageQualityBad).apply()
