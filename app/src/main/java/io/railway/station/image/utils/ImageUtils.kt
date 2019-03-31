@@ -10,6 +10,7 @@ import com.facebook.imagepipeline.common.ResizeOptions
 import com.facebook.imagepipeline.image.ImageInfo
 import com.facebook.imagepipeline.request.ImageRequestBuilder
 import io.railway.station.image.App
+import io.railway.station.image.R
 import io.railway.station.image.database.photos.Image
 import io.reactivex.Observable
 import java.io.File
@@ -62,6 +63,8 @@ fun SimpleDraweeView.loadImage(
         }
     }
 
+    hierarchy.setFailureImage(R.drawable.image_failure)
+    hierarchy.setPlaceholderImage(R.drawable.image_loading)
     controller = Fresco.newDraweeControllerBuilder()
             .setOldController(controller)
             .setControllerListener(listener)
