@@ -3,6 +3,7 @@ package io.railway.station.image
 import android.Manifest
 import android.animation.ValueAnimator
 import android.app.Activity
+import android.arch.lifecycle.ViewModelProviders
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -57,7 +58,6 @@ class ImageActivity : RxAppCompatActivity() {
     private val multiplyImageActionMode by lazy { MultiplyImageActionModeController(bottomAppBar, fab, this) }
 
     // To avoid extra requests
-    private var currentStationName: String? = null
     private var permissionActions: MutableMap<Int, () -> Unit> = mutableMapOf()
 
     private val turnOnGpsSubject by lazy { PublishSubject.create<Boolean>() }
@@ -91,6 +91,9 @@ class ImageActivity : RxAppCompatActivity() {
 
     fun getMenuResourceId(isImageQualityBad: Boolean = this.isImageQualityBad): Int =
             if (isImageQualityBad) R.menu.activity_image_good else R.menu.activity_image_bad
+
+    private val viewModel
+        get() = ViewModelProviders.of(this).get(StationViewModel::class.java)
 
     private fun getLocationObservable(): Observable<Location> {
         locationSubject.onComplete()
@@ -146,7 +149,7 @@ class ImageActivity : RxAppCompatActivity() {
     }
 
     private fun showImage(stationName: String) {
-        if (stationName != currentStationName) {
+        if (stationName != stationViewModel.stationName) {
             if (stationName == IMAGE_FAVOURITE_LIST) showFavouriteImage()
             else {
                 val disposable = stationViewModel.getImageByPattern(stationName)
@@ -188,7 +191,7 @@ class ImageActivity : RxAppCompatActivity() {
     }
 
     private fun showFavouriteImage(isImagesUpdate: Boolean = false) {
-        if (isImagesUpdate || currentStationName != IMAGE_FAVOURITE_LIST) {
+        if (isImagesUpdate || viewModel.stationName != IMAGE_FAVOURITE_LIST) {
             val disposable = stationViewModel.getFavouriteImage()
                     .io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
                     .subscribe({ updateStationData(it, IMAGE_FAVOURITE_LIST) },
@@ -197,20 +200,24 @@ class ImageActivity : RxAppCompatActivity() {
         }
     }
 
-    private fun updateStationData(images: List<Image>?, stationName: String) {
+    private fun updateStationData(images: List<Image>?, stationName: String, isShowMsg: Boolean = true) {
         searchView.setSuggestions(null)
-        if (images?.isNotEmpty() != true) snackBarHelper.show(getString(R.string.image_msg_not_found))
-        else {
-            val msg = if (stationName.isFavouriteScreen()) getString(R.string.favourite)
-            else stationName.formatStationName().limitWithLastConsonant(AssetsPhotoDB.STATION_MAX_LENGTH)
-            snackBarHelper.show(msg)
+        if (images?.isNotEmpty() != true) {
+            if (isShowMsg) snackBarHelper.show(getString(R.string.image_msg_not_found))
+        } else {
+            if (isShowMsg) {
+                val msg = if (stationName.isFavouriteScreen()) getString(R.string.favourite)
+                else stationName.formatStationName().limitWithLastConsonant(AssetsPhotoDB.STATION_MAX_LENGTH)
+                snackBarHelper.show(msg)
+            }
             saveStationRequest(stationName)
+            stationViewModel.images = images
             adapter.setData(images)
         }
     }
 
     private fun saveStationRequest(stationName: String) {
-        currentStationName = stationName
+        stationViewModel.stationName = stationName
         if (requestHistory.contains(stationName)) requestHistory.remove(stationName)
         requestHistory.add(stationName)
     }
@@ -253,13 +260,15 @@ class ImageActivity : RxAppCompatActivity() {
         adapter.setMultiplyImageActionModeController(multiplyImageActionMode)
         recyclerView.adapter = adapter
 
+        initStationViewModel()
+    }
 
-        stationViewModel = StationViewModel()
+    private fun initStationViewModel() {
+        stationViewModel = viewModel
+        val stationName = stationViewModel.stationName
+        if (stationName != null) updateStationData(stationViewModel.images, stationName, false)
+        else searchView.post { showSearchBar(false) }
         lifecycle.addObserver(stationViewModel)
-
-        searchView.post {
-            showSearchBar(false)
-        }
     }
 
     override fun onStop() {
@@ -469,7 +478,7 @@ class ImageActivity : RxAppCompatActivity() {
         return true
     }
 
-    fun isFavouriteScreen() = currentStationName.isFavouriteScreen()
+    fun isFavouriteScreen() = stationViewModel.stationName.isFavouriteScreen()
 
     private fun String?.isFavouriteScreen() = this == IMAGE_FAVOURITE_LIST
 

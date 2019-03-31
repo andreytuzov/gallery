@@ -3,6 +3,7 @@ package io.railway.station.image.data
 import android.arch.lifecycle.Lifecycle
 import android.arch.lifecycle.LifecycleObserver
 import android.arch.lifecycle.OnLifecycleEvent
+import android.arch.lifecycle.ViewModel
 import android.location.Location
 import io.railway.station.image.App
 import io.railway.station.image.database.photos.AssetsPhotoDB
@@ -15,9 +16,11 @@ import java.util.*
 /**
  * Now it's include business logic functions
  */
-class StationViewModel : LifecycleObserver {
+class StationViewModel : LifecycleObserver, ViewModel() {
 
     private lateinit var assetsPhotoDB: AssetsPhotoDB
+    var images: List<Image>? = null
+    var stationName: String? = null
 
     @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
     private fun connect() {
