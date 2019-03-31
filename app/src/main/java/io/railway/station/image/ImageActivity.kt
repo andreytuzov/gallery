@@ -194,8 +194,10 @@ class ImageActivity : RxAppCompatActivity() {
         if (isImagesUpdate || viewModel.stationName != IMAGE_FAVOURITE_LIST) {
             val disposable = stationViewModel.getFavouriteImage()
                     .io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
-                    .subscribe({ updateStationData(it, IMAGE_FAVOURITE_LIST) },
-                            { K.e("Error during get favourite image", it) })
+                    .subscribe({
+                        if (it.isEmpty()) onBackPressed()
+                        else updateStationData(it, IMAGE_FAVOURITE_LIST)
+                    }, { K.e("Error during get favourite image", it) })
             compositeDisposable.add(disposable)
         }
     }
@@ -203,7 +205,11 @@ class ImageActivity : RxAppCompatActivity() {
     private fun updateStationData(images: List<Image>?, stationName: String, isShowMsg: Boolean = true) {
         searchView.setSuggestions(null)
         if (images?.isNotEmpty() != true) {
-            if (isShowMsg) snackBarHelper.show(getString(R.string.image_msg_not_found))
+            if (isShowMsg) {
+                val msg = if (stationName.isFavouriteScreen()) R.string.favourite_image_msg_not_found
+                else R.string.image_msg_not_found
+                snackBarHelper.show(getString(msg))
+            }
         } else {
             if (isShowMsg) {
                 val msg = if (stationName.isFavouriteScreen()) getString(R.string.favourite)
