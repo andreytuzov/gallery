@@ -15,10 +15,10 @@ import android.speech.RecognizerIntent
 import android.support.design.widget.FloatingActionButton
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
+import android.support.v7.widget.GridLayoutManager
 import android.support.v7.widget.RecyclerView
 import android.view.*
 import android.widget.TextView
-import com.arasthel.spannedgridlayoutmanager.SpannedGridLayoutManager
 import com.crashlytics.android.Crashlytics
 import com.crashlytics.android.answers.Answers
 import com.crashlytics.android.core.CrashlyticsCore
@@ -43,6 +43,7 @@ class ImageActivity : RxAppCompatActivity() {
 
     lateinit var adapter: ImageRecyclerAdapter
     private lateinit var recyclerView: RecyclerView
+    private lateinit var layoutManager: GridLayoutManager
     private lateinit var stationViewModel: StationViewModel
 
     private val requestHistory = mutableListOf<String>()
@@ -84,6 +85,12 @@ class ImageActivity : RxAppCompatActivity() {
     private var showNearestImageDisposable: Disposable? = null
     private var showNearestStationDisposable: Disposable? = null
     private var isNeedStartSearch: Boolean = false
+
+    private val isImageQualityBad
+        get() = App.pref.getBoolean(PREF_IS_IMAGE_QUALITY_BAD, DEFAULT_IS_IMAGE_QUALITY_BAD)
+
+    fun getMenuResourceId(isImageQualityBad: Boolean = this.isImageQualityBad): Int =
+            if (isImageQualityBad) R.menu.activity_image_good else R.menu.activity_image_bad
 
     private fun getLocationObservable(): Observable<Location> {
         locationSubject.onComplete()
@@ -198,7 +205,7 @@ class ImageActivity : RxAppCompatActivity() {
             else stationName.formatStationName().limitWithLastConsonant(AssetsPhotoDB.STATION_MAX_LENGTH)
             snackBarHelper.show(msg)
             saveStationRequest(stationName)
-            adapter.updateData(images)
+            adapter.setData(images)
         }
     }
 
@@ -235,14 +242,12 @@ class ImageActivity : RxAppCompatActivity() {
 
         // Get name of station
         recyclerView = findViewById(R.id.recyclerView)
-        val maxSpansSize = App.pref.getInt(PREF_MAX_IMAGE_SIZE, 3)
-        adapter = ImageRecyclerAdapter(this, maxSpansSize)
+        val columnCount = App.pref.getInt(PREF_COLUMN_COUNT, DEFAULT_COLUMN_COUNT)
+        adapter = ImageRecyclerAdapter(this, columnCount, isImageQualityBad)
         adapter.setMultiplyImageActionModeController(multiplyImageActionMode)
         recyclerView.adapter = adapter
-        val layoutManager = SpannedGridLayoutManager(SpannedGridLayoutManager.Orientation.VERTICAL, maxSpansSize)
-        layoutManager.spanSizeLookup = SpannedGridLayoutManager.SpanSizeLookup {
-            adapter.getSpanSizeByPosition(it)
-        }
+        layoutManager = GridLayoutManager(this, columnCount, GridLayoutManager.VERTICAL,
+                false)
         recyclerView.layoutManager = layoutManager
 
         stationViewModel = StationViewModel()
@@ -278,7 +283,7 @@ class ImageActivity : RxAppCompatActivity() {
     /**
      * If gps is not enabled then we show the dialog to enable gps and result goes into onActivityResult method
      */
-    fun executeAfterTurnOnGps(block: () -> Unit) {
+    private fun executeAfterTurnOnGps(block: () -> Unit) {
         val disposable = turnOnGpsSubject
                 .firstElement()
                 .subscribe {
@@ -321,7 +326,7 @@ class ImageActivity : RxAppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.activity_image, menu)
+        menuInflater.inflate(getMenuResourceId(), menu)
         return super.onCreateOptionsMenu(menu)
     }
 
@@ -333,6 +338,18 @@ class ImageActivity : RxAppCompatActivity() {
             }
             R.id.action_search -> showSearchBar()
             R.id.action_favourite -> showFavouriteImage()
+            R.id.action_column_count -> {
+                layoutManager.spanCount = adapter.nextColumnCount()
+                adapter.notifyDataSetChanged()
+            }
+            R.id.action_image_quality -> {
+                val isImageQualityBad = !this.isImageQualityBad
+                App.pref.edit().putBoolean(PREF_IS_IMAGE_QUALITY_BAD, isImageQualityBad).apply()
+                adapter.nextImageQuality()
+                App.handler.post {
+                    bottomAppBar.replaceMenu(getMenuResourceId(isImageQualityBad))
+                }
+            }
         }
         val result = multiplyImageActionMode.onOptionsItemSelected(item)
         return if (result) result else super.onOptionsItemSelected(item)
@@ -453,7 +470,7 @@ class ImageActivity : RxAppCompatActivity() {
 
     fun isFavouriteScreen() = currentStationName.isFavouriteScreen()
 
-    fun String?.isFavouriteScreen() = this == IMAGE_FAVOURITE_LIST
+    private fun String?.isFavouriteScreen() = this == IMAGE_FAVOURITE_LIST
 
     private fun String.formatStationName(): String {
         val startBrace = indexOf('(')
@@ -520,7 +537,11 @@ class ImageActivity : RxAppCompatActivity() {
 
         const val IMAGE_FAVOURITE_LIST = "imageFavouriteList"
 
-        private const val PREF_MAX_IMAGE_SIZE = "max_image_size"
+        private const val PREF_COLUMN_COUNT = "column_count"
+        private const val PREF_IS_IMAGE_QUALITY_BAD = "image_is_quality_bad"
+
+        private const val DEFAULT_COLUMN_COUNT = 3
+        private const val DEFAULT_IS_IMAGE_QUALITY_BAD = false
     }
 }
 

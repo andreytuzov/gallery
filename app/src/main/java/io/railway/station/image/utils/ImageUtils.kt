@@ -44,7 +44,7 @@ object ImageUtils {
 fun SimpleDraweeView.loadImage(
         imageUrl: String,
         imageWidth: Int,
-        imageHeight: Int,
+        imageHeight: Int = imageWidth,
         doAfterLoadImage: (() -> Unit)? = null,
         doAfterFailure: (() -> Unit)? = null
 ) {

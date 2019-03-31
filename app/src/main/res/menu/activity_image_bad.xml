@@ -10,5 +10,15 @@
         android:id="@+id/action_favourite"
         android:icon="@drawable/ic_action_favourite"
         android:title="@string/action_favourite"
-        app:showAsAction="always" />
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_image_quality"
+        android:icon="@drawable/ic_action_quality_bad"
+        android:title="@string/action_image_quality_bad"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_column_count"
+        android:icon="@drawable/ic_action_column_count"
+        android:title="@string/action_column_count"
+        app:showAsAction="ifRoom" />
 </menu>

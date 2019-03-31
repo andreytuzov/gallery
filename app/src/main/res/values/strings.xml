@@ -15,4 +15,7 @@
     <string name="favourite">Избранное</string>
     <string name="request_turn_on_gps">Пожалуйста, включите GPS</string>
     <string name="error_turn_on_gps">Ошибка во время включения GPS</string>
+    <string name="action_column_count">Количество колонок</string>
+    <string name="action_image_quality_bad">Низкое качество</string>
+    <string name="action_image_quality_good">Высокое качество</string>
 </resources>

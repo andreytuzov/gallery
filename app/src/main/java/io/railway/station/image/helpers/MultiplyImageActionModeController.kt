@@ -1,13 +1,11 @@
 package io.railway.station.image.helpers
 
 import android.Manifest
-import android.app.Activity
 import android.content.Intent
 import android.os.Environment
 import android.support.design.bottomappbar.BottomAppBar
 import android.support.design.widget.FloatingActionButton
 import android.view.MenuItem
-import android.view.View
 import com.trello.rxlifecycle2.android.ActivityEvent
 import io.reactivex.Observable
 import io.railway.station.image.ImageActivity
@@ -49,7 +47,7 @@ class MultiplyImageActionModeController(
         mIsInActionMode = false
         mBottomAppBar.hideOnScroll = true
         mFab.setImageDrawable(RUtils.getDrawableCompat(R.drawable.ic_menu_search_location, mActivity))
-        createTransitionAnimation(false, R.menu.activity_image).start()
+        createTransitionAnimation(false, mActivity.getMenuResourceId()).start()
         mFab.setOnClickDebounceListener { mActivity.showNearestImage() }
     }
 
