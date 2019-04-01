@@ -1,16 +1,16 @@
 package io.railway.station.image
 
-import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Handler
+import android.support.multidex.MultiDexApplication
 import com.facebook.drawee.backends.pipeline.Fresco
 import org.apache.log4j.BasicConfigurator
 import io.railway.station.image.database.photos.AssetsPhotoDB
 import io.railway.station.image.helpers.TooltipManager
 import io.railway.station.image.helpers.TryMe
 
-class App : Application() {
+class App : MultiDexApplication() {
 
     override fun onCreate() {
         super.onCreate()
@@ -20,7 +20,7 @@ class App : Application() {
         tooltipManager = TooltipManager()
         Thread.setDefaultUncaughtExceptionHandler(TryMe())
         super.onCreate()
-        BasicConfigurator.configure()
+        if (BuildConfig.DEBUG) BasicConfigurator.configure()
         AssetsPhotoDB.configure(baseContext)
         Fresco.initialize(this)
     }

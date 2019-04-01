@@ -29,6 +29,7 @@ obj/
 # Generated files
 bin/
 gen/
+app/release/
 
 # Gradle files
 .gradle/

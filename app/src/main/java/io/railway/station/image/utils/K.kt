@@ -1,15 +1,16 @@
 package io.railway.station.image.utils
 
 import android.util.Log
+import io.railway.station.image.BuildConfig
 
 object K {
     private val LOG_TAG = "stationGallery"
 
     fun d(msg: String) {
-        Log.d(LOG_TAG, msg)
+        if (BuildConfig.DEBUG) Log.d(LOG_TAG, msg)
     }
 
     fun e(msg: String, error: Throwable) {
-        Log.e(LOG_TAG, msg, error)
+        if (BuildConfig.DEBUG) Log.e(LOG_TAG, msg, error)
     }
 }

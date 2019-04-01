@@ -9,8 +9,8 @@ android {
         applicationId "io.railway.station.image"
         minSdkVersion 16
         targetSdkVersion 28
-        versionCode 4
-        versionName "1.4"
+        versionCode 2
+        versionName "1.0.1"
         multiDexEnabled true
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }

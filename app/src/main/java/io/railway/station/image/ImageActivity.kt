@@ -195,7 +195,7 @@ class ImageActivity : RxAppCompatActivity() {
             val disposable = stationViewModel.getFavouriteImage()
                     .io(bindUntilEvent<Any>(ActivityEvent.DESTROY))
                     .subscribe({
-                        if (it.isEmpty()) onBackPressed()
+                        if (it.isEmpty() && isImagesUpdate) restoreStationRequest()
                         else updateStationData(it, IMAGE_FAVOURITE_LIST)
                     }, { K.e("Error during get favourite image", it) })
             compositeDisposable.add(disposable)
@@ -243,11 +243,13 @@ class ImageActivity : RxAppCompatActivity() {
         initBottomBar()
 
         if (Build.VERSION.SDK_INT >= 21) {
-            window.navigationBarColor = Color.parseColor("#F0F0F0")
-            window.statusBarColor = Color.parseColor("#F0F0F0")
+            window.navigationBarColor = Color.BLACK
+            window.statusBarColor = Color.BLACK
             if (Build.VERSION.SDK_INT >= 23) {
+                window.statusBarColor = Color.parseColor("#F0F0F0")
                 window.decorView.systemUiVisibility = window.decorView.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
                 if (Build.VERSION.SDK_INT >= 26) {
+                    window.navigationBarColor = Color.parseColor("#F0F0F0")
                     window.decorView.systemUiVisibility = window.decorView.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
                 }
             }
@@ -437,6 +439,7 @@ class ImageActivity : RxAppCompatActivity() {
                 isLocationRegistred = true
                 App.handler.post {
                     searchView.setIsProgressBarVisible(true)
+                    fab.isActivated = true
                 }
                 // Request location
                 if (gpsEnabled) {
@@ -445,7 +448,6 @@ class ImageActivity : RxAppCompatActivity() {
                 if (networkEnabled) {
                     locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0F, locationService, Looper.getMainLooper())
                 }
-                fab.isActivated = true
             }
         }
     }
@@ -458,10 +460,10 @@ class ImageActivity : RxAppCompatActivity() {
             isLocationRegistred = false
             App.handler.post {
                 searchView.setIsProgressBarVisible(false)
+                fab.isActivated = false
             }
             val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
             locationManager.removeUpdates(locationService)
-            fab.isActivated = false
         }
     }
 
